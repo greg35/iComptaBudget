@@ -1,20 +1,14 @@
 services:
   icomptabudget:
-    build:
-      context: https://github.com/greg35/iComptaBudget.git
-      dockerfile: Dockerfile
+    # Utiliser une image pré-construite au lieu de build
+    image: ghcr.io/greg35/icomptabudget:latest
     container_name: icomptabudget_app
     ports:
-      # Seulement le port du frontend est exposé
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:
-      # Mount data directory for SQLite databases
       - ./data:/app/data
-      # Mount logs directory
       - ./logs:/app/logs
-      # Mount iCompta database file (adjust path as needed)
       - ./Comptes.cdb:/app/Comptes.cdb:ro
-      # Mount budget database
       - ./iComptaBudgetData.sqlite:/app/iComptaBudgetData.sqlite
     environment:
       - NODE_ENV=production
