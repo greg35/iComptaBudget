@@ -7,6 +7,7 @@ import { TransactionsList } from "./components/TransactionsList";
 import { HomeView } from "./components/HomeView";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
+import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
@@ -23,10 +24,44 @@ export default function App() {
   const [projects, setProjects] = useState([] as Project[]);
   const [loadingProjects, setLoadingProjects] = useState(false as boolean);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [isFirstStartup, setIsFirstStartup] = useState<boolean | null>(null);
+  const [checkingFirstStartup, setCheckingFirstStartup] = useState(true);
+
+  // Check if this is first startup (no database exists)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        // Use the dedicated first startup detection endpoint
+        const res = await fetch('/api/first-startup');
+        if (!mounted) return;
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('First startup check:', data);
+          setIsFirstStartup(data.isFirstStartup);
+        } else {
+          // If endpoint fails, assume it's first startup
+          console.log('First startup endpoint failed, assuming first startup');
+          setIsFirstStartup(true);
+        }
+      } catch (e) {
+        console.error('Error checking first startup:', e);
+        // If we can't reach the backend, assume it's first startup
+        if (mounted) setIsFirstStartup(true);
+      } finally {
+        if (mounted) setCheckingFirstStartup(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // fetch projects from backend on mount
   useEffect(() => {
     let mounted = true;
+    // Only fetch projects if it's not first startup
+    if (isFirstStartup === true) return;
+    
     (async () => {
       setLoadingProjects(true);
       try {
@@ -56,7 +91,7 @@ export default function App() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [isFirstStartup]);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
   const [projectTransactions, setProjectTransactions] = useState([]);
@@ -65,6 +100,9 @@ export default function App() {
   // Load settings from backend
   useEffect(() => {
     let mounted = true;
+    // Only load settings if it's not first startup
+    if (isFirstStartup === true) return;
+    
     (async () => {
       try {
         const res = await fetch('http://127.0.0.1:4000/api/settings');
@@ -79,12 +117,15 @@ export default function App() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [isFirstStartup]);
 
   // savings accounts loaded from backend
   const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>(defaultSavingsAccounts);
   useEffect(() => {
     let mounted = true;
+    // Only load savings accounts if it's not first startup
+    if (isFirstStartup === true) return;
+    
     (async () => {
       try {
         const res = await fetch('/api/accounts?folder=Disponible&excludeTypes=checking');
@@ -104,7 +145,7 @@ export default function App() {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [isFirstStartup]);
 
   // fetch transactions for selected project
   useEffect(() => {
@@ -357,6 +398,34 @@ export default function App() {
   const handleUpdateDropboxUrl = (url: string) => {
     setDropboxUrl(url);
   };
+
+  const handleFirstStartupComplete = () => {
+    setIsFirstStartup(false);
+    // Force reload of all data after first startup is complete
+    window.location.reload();
+  };
+
+  // Show loading while checking if it's first startup
+  if (checkingFirstStartup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show first startup view if this is the first time
+  if (isFirstStartup) {
+    return (
+      <>
+        <FirstStartupView onComplete={handleFirstStartupComplete} />
+        <Toaster />
+      </>
+    );
+  }
   return (
     <SidebarProvider>
       <ErrorBoundary>

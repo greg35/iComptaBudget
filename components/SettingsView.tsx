@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Settings, Save, Check, Download, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
+import { updateAccounts } from "../utils/accountsApi";
 
 interface AccountPreference {
   accountId: string;
@@ -173,30 +174,12 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   };
 
   const handleUpdateAccounts = async () => {
-    if (!dropboxUrl) {
-      toast.error('Veuillez d\'abord configurer l\'URL Dropbox');
-      return;
-    }
-
     setIsUpdatingAccounts(true);
     try {
-      const response = await fetch('http://127.0.0.1:4000/api/update-accounts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const success = await updateAccounts({
+        requireDropboxUrl: true,
+        dropboxUrl: dropboxUrl
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      toast.success(result.message || 'Comptes mis à jour avec succès !');
-    } catch (error) {
-      console.error('Failed to update accounts:', error);
-      toast.error(error.message || 'Échec de la mise à jour des comptes');
     } finally {
       setIsUpdatingAccounts(false);
     }
