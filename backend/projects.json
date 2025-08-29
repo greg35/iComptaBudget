@@ -1,0 +1,5 @@
+[
+  { "id": "1", "name": "Voyage au Japon", "date": "2024-01-15", "plannedBudget": 5000, "dbProject": null },
+  { "id": "2", "name": "Nouvelle voiture", "date": "2024-03-10", "plannedBudget": 25000, "dbProject": null },
+  { "id": "3", "name": "Rénovation cuisine", "date": "2024-05-20", "plannedBudget": 15000, "dbProject": null }
+]

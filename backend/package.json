@@ -1,0 +1,11 @@
+{
+  "name": "icompta-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sql.js": "^1.8.0",
+    "yauzl": "^3.2.0"
+  }
+}
