@@ -86,7 +86,7 @@ export function HomeView({ projects, savingsAccounts }: HomeViewProps) {
         <div>
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-sm">Solde comptes</CardTitle>
+              <CardTitle className="text-sm">Épargne totale</CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -99,7 +99,7 @@ export function HomeView({ projects, savingsAccounts }: HomeViewProps) {
         <div>
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-sm">Épargne totale</CardTitle>
+              <CardTitle className="text-sm">Épargne projets</CardTitle>
               <PiggyBank className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

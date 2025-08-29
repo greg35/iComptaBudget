@@ -16,16 +16,31 @@ router.get('/', async (req, res) => {
     }
     
     const folder = (req.query.folder || '').toString();
-    const excludeExcluded = req.query.excluded === 'false'; // Support ?excluded=false to filter out excluded accounts
+    const filterType = req.query.filterType; // 'savings' or 'checking'
     
     // Get excluded account IDs if we need to filter them
     let excludedAccountIds = [];
-    if (excludeExcluded && fs.existsSync(config.DATA_DB_PATH)) {
+    let excludeExcluded = false;
+    if (filterType && fs.existsSync(config.DATA_DB_PATH)) {
       try {
         const SQL = await initSqlJs();
         const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
         const prefsDb = new SQL.Database(filebuffer);
-        const prefsResult = prefsDb.exec("SELECT accountId FROM account_preferences WHERE excluded = 1");
+        
+        // Select accounts to exclude based on filter type
+        let filterQuery;
+        if (filterType === 'savings') {
+          filterQuery = "SELECT accountId FROM account_preferences WHERE includeSavings = 0";
+          excludeExcluded = true;
+        } else if (filterType === 'checking') {
+          filterQuery = "SELECT accountId FROM account_preferences WHERE includeChecking = 0";
+          excludeExcluded = true;
+        } else {
+          // Unknown filterType: don't exclude any accounts
+          filterQuery = "SELECT accountId FROM account_preferences WHERE 1=0"; // Return empty result
+        }
+        
+        const prefsResult = prefsDb.exec(filterQuery);
         if (prefsResult && prefsResult[0]) {
           excludedAccountIds = prefsResult[0].values.map(row => row[0]);
         }

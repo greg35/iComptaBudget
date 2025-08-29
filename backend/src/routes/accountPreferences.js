@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
     const db = new SQL.Database(filebuffer);
     
-    const result = db.exec("SELECT accountId, accountName, excluded FROM account_preferences ORDER BY accountName");
+    const result = db.exec("SELECT accountId, accountName, includeSavings, includeChecking FROM account_preferences ORDER BY accountName");
     const preferences = [];
     
     if (result && result[0]) {
@@ -28,7 +28,8 @@ router.get('/', async (req, res) => {
         preferences.push({
           accountId: String(pref.accountId),
           accountName: pref.accountName || '',
-          excluded: Boolean(pref.excluded)
+          includeSavings: Boolean(pref.includeSavings),
+          includeChecking: Boolean(pref.includeChecking)
         });
       }
     }
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
 // Save account preference
 router.post('/', async (req, res) => {
   try {
-    const { accountId, accountName, excluded } = req.body;
+    const { accountId, accountName, includeSavings, includeChecking } = req.body;
     if (!accountId || !accountName) {
       return res.status(400).json({ error: 'accountId and accountName are required' });
     }
@@ -59,15 +60,24 @@ router.post('/', async (req, res) => {
     
     const escapedId = accountId.replace(/'/g, "''");
     const escapedName = accountName.replace(/'/g, "''");
-    const excludedValue = excluded ? 1 : 0;
     
-    db.exec(`INSERT OR REPLACE INTO account_preferences (accountId, accountName, excluded) VALUES ('${escapedId}', '${escapedName}', ${excludedValue})`);
+    const includeSavingsValue = includeSavings ? 1 : 0;
+    const includeCheckingValue = includeChecking ? 1 : 0;
+    
+    db.exec(`INSERT OR REPLACE INTO account_preferences (accountId, accountName, includeSavings, includeChecking) 
+             VALUES ('${escapedId}', '${escapedName}', ${includeSavingsValue}, ${includeCheckingValue})`);
     
     const binary = db.export();
     fs.writeFileSync(config.DATA_DB_PATH, Buffer.from(binary));
     db.close();
     
-    res.json({ ok: true, accountId, accountName, excluded: Boolean(excluded) });
+    res.json({ 
+      ok: true, 
+      accountId, 
+      accountName, 
+      includeSavings: Boolean(includeSavings),
+      includeChecking: Boolean(includeChecking)
+    });
   } catch (e) {
     console.error('Error saving account preference:', e && e.message);
     res.status(500).json({ error: 'Failed to save account preference' });
@@ -109,7 +119,7 @@ router.post('/refresh', async (req, res) => {
     }
     // Debug: log accounts array
     console.log('Accounts from main DB:', accounts);
-    
+
     // Update preferences database
     if (!fs.existsSync(config.DATA_DB_PATH)) {
       return res.status(500).json({ error: 'data DB missing' });
@@ -119,11 +129,11 @@ router.post('/refresh', async (req, res) => {
     const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
     const db = new SQL.Database(filebuffer);
     
-    // Insert new accounts with default excluded = 0
+    // Insert new accounts with default includeSavings = 1, includeChecking = 1
     for (const account of accounts) {
       const escapedId = account.id.replace(/'/g, "''");
       const escapedName = account.name.replace(/'/g, "''");
-      db.exec(`INSERT OR IGNORE INTO account_preferences (accountId, accountName, excluded) VALUES ('${escapedId}', '${escapedName}', 0)`);
+      db.exec(`INSERT OR IGNORE INTO account_preferences (accountId, accountName, includeSavings, includeChecking) VALUES ('${escapedId}', '${escapedName}', 1, 1)`);
     }
     
     const binary = db.export();
@@ -158,9 +168,12 @@ router.post('/save-all', async (req, res) => {
       if (pref.accountId && pref.accountName) {
         const escapedId = pref.accountId.replace(/'/g, "''");
         const escapedName = pref.accountName.replace(/'/g, "''");
-        const excludedValue = pref.excluded ? 1 : 0;
         
-        db.exec(`INSERT OR REPLACE INTO account_preferences (accountId, accountName, excluded) VALUES ('${escapedId}', '${escapedName}', ${excludedValue})`);
+        const includeSavingsValue = pref.includeSavings ? 1 : 0;
+        const includeCheckingValue = pref.includeChecking ? 1 : 0;
+        
+        db.exec(`INSERT OR REPLACE INTO account_preferences (accountId, accountName, includeSavings, includeChecking) 
+                 VALUES ('${escapedId}', '${escapedName}', ${includeSavingsValue}, ${includeCheckingValue})`);
         saved++;
       }
     }

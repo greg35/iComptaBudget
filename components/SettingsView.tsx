@@ -11,7 +11,8 @@ import { updateAccounts } from "../utils/accountsApi";
 interface AccountPreference {
   accountId: string;
   accountName: string;
-  excluded: boolean;
+  includeSavings: boolean;
+  includeChecking: boolean;
 }
 
 interface SettingsViewProps {
@@ -74,8 +75,14 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     }
   };
 
-  const updateAccountPreference = async (accountId: string, accountName: string, excluded: boolean) => {
+  const updateAccountPreference = async (accountId: string, accountName: string, field: 'includeSavings' | 'includeChecking', value: boolean) => {
     try {
+      // Find current preference
+      const currentPref = accountPreferences.find(p => p.accountId === accountId);
+      if (!currentPref) return;
+
+      const updatedPref = { ...currentPref, [field]: value };
+
       const response = await fetch('http://127.0.0.1:2113/api/account-preferences', {
         method: 'POST',
         headers: {
@@ -84,7 +91,8 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
         body: JSON.stringify({
           accountId,
           accountName,
-          excluded
+          includeSavings: updatedPref.includeSavings,
+          includeChecking: updatedPref.includeChecking
         }),
       });
 
@@ -93,11 +101,13 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
         setAccountPreferences(prev => 
           prev.map(pref => 
             pref.accountId === accountId 
-              ? { ...pref, excluded }
+              ? updatedPref
               : pref
           )
         );
-        toast.success(excluded ? "Compte exclu des calculs" : "Compte inclus dans les calculs");
+        
+        const fieldLabel = field === 'includeSavings' ? 'épargne' : 'dépenses';
+        toast.success(value ? `Compte inclus dans les calculs d'${fieldLabel}` : `Compte exclu des calculs d'${fieldLabel}`);
       } else {
         throw new Error('Failed to update preference');
       }
@@ -373,7 +383,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
             Gestion des comptes
           </CardTitle>
           <CardDescription>
-            Configurez quels comptes inclure dans les calculs d'épargne
+            Configurez quels comptes inclure dans les calculs d'épargne et de dépenses
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -435,40 +445,58 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
               </div>
             ) : (
               <div className="max-h-64 overflow-y-auto border rounded-md">
-                <div className="space-y-0">
-                  {accountPreferences.map((pref, index) => (
-                    <div 
-                      key={pref.accountId}
-                      className={`flex items-center justify-between p-3 ${
-                        index !== accountPreferences.length - 1 ? 'border-b' : ''
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {pref.accountName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          ID: {pref.accountId}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`exclude-${pref.accountId}`}
-                          checked={pref.excluded}
-                          onCheckedChange={(checked) => 
-                            updateAccountPreference(pref.accountId, pref.accountName, !!checked)
-                          }
-                        />
-                        <Label 
-                          htmlFor={`exclude-${pref.accountId}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          Exclure
-                        </Label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <table className="w-full">
+                  {/* Header row */}
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left p-3 font-medium text-sm">Nom du compte</th>
+                      <th className="text-center p-3 font-medium text-sm border-l w-32">Inclure dans l'épargne</th>
+                      <th className="text-center p-3 font-medium text-sm border-l w-32">Inclure dans les dépenses</th>
+                    </tr>
+                  </thead>
+                  
+                  <tbody>
+                    {accountPreferences.map((pref, index) => (
+                      <tr 
+                        key={pref.accountId}
+                        className={`${index !== accountPreferences.length - 1 ? 'border-b' : ''} hover:bg-muted/20`}
+                      >
+                        <td className="p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {pref.accountName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              ID: {pref.accountId}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center border-l">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              id={`savings-${pref.accountId}`}
+                              checked={pref.includeSavings}
+                              onCheckedChange={(checked) => 
+                                updateAccountPreference(pref.accountId, pref.accountName, 'includeSavings', !!checked)
+                              }
+                            />
+                          </div>
+                        </td>
+                        <td className="p-3 text-center border-l">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              id={`checking-${pref.accountId}`}
+                              checked={pref.includeChecking}
+                              onCheckedChange={(checked) => 
+                                updateAccountPreference(pref.accountId, pref.accountName, 'includeChecking', !!checked)
+                              }
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
@@ -478,7 +506,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                 <span className="text-sm font-medium">Information</span>
               </div>
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                Les comptes exclus ne seront pas pris en compte dans les calculs d'épargne mensuelle. 
+                Cochez les cases pour inclure les comptes dans les calculs d'épargne mensuelle et de dépenses. 
                 Cliquez sur "Actualiser la liste" après avoir ajouté de nouveaux comptes dans votre base de données.
               </p>
             </div>

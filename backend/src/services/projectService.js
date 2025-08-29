@@ -198,7 +198,7 @@ async function migrateDataDb() {
       console.error('Settings table migration failed:', e && e.message);
     }
 
-    // Check if account_preferences table exists
+    // Check if account_preferences table exists and migrate it
     try {
       const tablesRes = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='account_preferences'");
       const hasAccountPreferencesTable = tablesRes && tablesRes[0] && tablesRes[0].values.length > 0;
@@ -208,9 +208,80 @@ async function migrateDataDb() {
         db.exec(`CREATE TABLE account_preferences (
           accountId TEXT PRIMARY KEY,
           accountName TEXT NOT NULL,
-          excluded INTEGER DEFAULT 0
+          includeSavings INTEGER DEFAULT 1,
+          includeChecking INTEGER DEFAULT 1
         );`);
         console.log('Migration completed: account_preferences table created');
+      } else {
+        // Check if we need to migrate from old 'excluded' column to new include columns
+        // Also check if we need to remove the excluded column
+        const schemaRes = db.exec("PRAGMA table_info(account_preferences)");
+        let hasExcludedColumn = false;
+        let hasIncludeSavingsColumn = false;
+        let hasIncludeCheckingColumn = false;
+        
+        if (schemaRes && schemaRes[0]) {
+          const cols = schemaRes[0].columns;
+          const nameIndex = cols.indexOf('name');
+          if (nameIndex >= 0) {
+            for (const row of schemaRes[0].values) {
+              const colName = row[nameIndex];
+              if (colName === 'excluded') hasExcludedColumn = true;
+              if (colName === 'includeSavings') hasIncludeSavingsColumn = true;
+              if (colName === 'includeChecking') hasIncludeCheckingColumn = true;
+            }
+          }
+        }
+
+        // Migration from old format to new format
+        if (hasExcludedColumn && !hasIncludeSavingsColumn && !hasIncludeCheckingColumn) {
+          console.log('Migrating account_preferences from excluded to include columns...');
+          
+          // Add new columns
+          db.exec('ALTER TABLE account_preferences ADD COLUMN includeSavings INTEGER DEFAULT 1');
+          db.exec('ALTER TABLE account_preferences ADD COLUMN includeChecking INTEGER DEFAULT 1');
+          
+          // Migrate data: excluded=1 becomes includeSavings=0, includeChecking=0
+          // excluded=0 becomes includeSavings=1, includeChecking=1
+          db.exec(`UPDATE account_preferences SET 
+            includeSavings = CASE WHEN excluded = 1 THEN 0 ELSE 1 END,
+            includeChecking = CASE WHEN excluded = 1 THEN 0 ELSE 1 END`);
+          
+          console.log('Migration completed: account_preferences migrated to include format');
+        } else if (!hasIncludeSavingsColumn || !hasIncludeCheckingColumn) {
+          // Add missing columns if needed
+          if (!hasIncludeSavingsColumn) {
+            db.exec('ALTER TABLE account_preferences ADD COLUMN includeSavings INTEGER DEFAULT 1');
+          }
+          if (!hasIncludeCheckingColumn) {
+            db.exec('ALTER TABLE account_preferences ADD COLUMN includeChecking INTEGER DEFAULT 1');
+          }
+          console.log('Migration completed: added missing include columns');
+        }
+
+        // Remove excluded column if it exists (cleanup migration)
+        if (hasExcludedColumn && hasIncludeSavingsColumn && hasIncludeCheckingColumn) {
+          console.log('Removing excluded column from account_preferences...');
+          
+          // Create new table without excluded column
+          db.exec(`CREATE TABLE account_preferences_new (
+            accountId TEXT PRIMARY KEY,
+            accountName TEXT NOT NULL,
+            includeSavings INTEGER DEFAULT 1,
+            includeChecking INTEGER DEFAULT 1
+          );`);
+          
+          // Copy data to new table
+          db.exec(`INSERT INTO account_preferences_new (accountId, accountName, includeSavings, includeChecking)
+                   SELECT accountId, accountName, includeSavings, includeChecking 
+                   FROM account_preferences`);
+          
+          // Drop old table and rename new one
+          db.exec('DROP TABLE account_preferences');
+          db.exec('ALTER TABLE account_preferences_new RENAME TO account_preferences');
+          
+          console.log('Migration completed: excluded column removed');
+        }
       }
     } catch (e) {
       console.error('Account preferences table migration failed:', e && e.message);

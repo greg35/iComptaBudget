@@ -157,7 +157,8 @@ Le projet utilise deux bases de données SQLite :
 
 ### Comptes
 - `GET /api/accounts` - Liste des comptes
-- `GET /api/accounts?excluded=false` - Comptes non exclus seulement
+- `GET /api/accounts?filterType=savings` - Comptes inclus dans l'épargne
+- `GET /api/accounts?filterType=checking` - Comptes inclus dans les dépenses
 
 ### Configuration
 - `GET /api/first-startup` - Vérification premier démarrage
