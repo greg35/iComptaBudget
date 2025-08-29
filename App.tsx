@@ -128,7 +128,7 @@ export default function App() {
     
     (async () => {
       try {
-        const res = await fetch('/api/accounts?excluded=false');
+        const res = await fetch('/api/accounts?filterType=savings');
         if (!res.ok) throw new Error('failed to fetch accounts');
         const data = await res.json();
         if (!mounted) return;
