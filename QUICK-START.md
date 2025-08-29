@@ -18,8 +18,8 @@ Ce repository contient maintenant un setup Docker Compose complet pour déployer
    ```
 
 3. **Accéder à l'application**
-   - Interface : http://localhost:3000
-   - Santé API : http://localhost:3000/api/health
+   - Interface : http://localhost:2112
+   - Santé API : http://localhost:2112/api/health
 
 ## 📁 Fichiers Docker Compose
 

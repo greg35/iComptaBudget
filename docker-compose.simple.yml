@@ -1,0 +1,35 @@
+# Docker Compose simple pour iComptaBudget
+# Ce fichier offre une configuration simplifiée pour démarrer rapidement le service
+
+services:
+  icomptabudget:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: icomptabudget_app
+    ports:
+      - "${FRONTEND_PORT:-2112}:2112"
+    volumes:
+      # Répertoires de données (créés automatiquement)
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Base de données iCompta (optionnelle - sera créée si absente)
+      - ./Comptes.cdb:/app/Comptes.cdb:ro
+      # Base de données de l'application (créée automatiquement)
+      - ./iComptaBudgetData.sqlite:/app/iComptaBudgetData.sqlite
+    environment:
+      - NODE_ENV=production
+      - PORT=2112
+      - TZ=Europe/Paris
+    restart: unless-stopped
+    healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:2112/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Volumes nommés pour persistance (optionnel)
+volumes:
+  data:
+  logs:

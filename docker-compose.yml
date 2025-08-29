@@ -1,19 +1,27 @@
 services:
   icomptabudget:
-    # Utiliser une image pré-construite au lieu de build
-    image: ghcr.io/greg35/icomptabudget:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: icomptabudget_app
     ports:
-      - "${FRONTEND_PORT:-2112}:2112"
+  # Seulement le port du frontend est exposé
+  - "${FRONTEND_PORT:-2112}:2112"
     volumes:
+      # Mount data directory for SQLite databases
       - ./data:/app/data
+      # Mount logs directory
       - ./logs:/app/logs
+      # Mount iCompta database file (adjust path as needed)
       - ./Comptes.cdb:/app/Comptes.cdb:ro
+      # Mount budget database
       - ./iComptaBudgetData.sqlite:/app/iComptaBudgetData.sqlite
     environment:
-      - NODE_ENV=production
-  - FRONTEND_PORT=2112
+  - NODE_ENV=production
+  - PORT=2112
       - TZ=${TZ:-Europe/Paris}
+    env_file:
+      - .env
     restart: unless-stopped
     healthcheck:
   test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: 2112, path: '/api/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]

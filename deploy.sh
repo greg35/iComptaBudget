@@ -19,7 +19,7 @@ if [ ! -f ".env" ]; then
     echo "📝 Création du fichier .env..."
     cat > .env << EOF
 NODE_ENV=production
-FRONTEND_PORT=3000
+FRONTEND_PORT=2112
 TZ=Europe/Paris
 EOF
 fi
@@ -61,11 +61,11 @@ docker compose -f "$COMPOSE_FILE" ps
 
 echo ""
 echo "✅ iComptaBudget est maintenant accessible !"
-echo "🌍 Frontend : http://localhost:3000"
+echo "🌍 Frontend : http://localhost:2112"
 echo "🔧 API interne (non exposée) : disponible via /api/*"
 echo ""
 echo "📋 Commandes utiles :"
 echo "  docker compose -f $COMPOSE_FILE logs -f    # Voir les logs"
 echo "  docker compose -f $COMPOSE_FILE stop       # Arrêter"
 echo "  docker compose -f $COMPOSE_FILE restart    # Redémarrer"
-echo "  curl http://localhost:3000/api/health      # Test de santé"
+echo "  curl http://localhost:2112/api/health      # Test de santé"

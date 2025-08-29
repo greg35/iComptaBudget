@@ -6,7 +6,7 @@ Ce guide vous explique comment déployer iComptaBudget avec Docker et Docker Com
 
 ### Prérequis
 - Docker et Docker Compose installés
-- Port 3000 disponible
+- Port 2112 disponible
 
 ### Étapes
 1. **Cloner le projet**
@@ -34,8 +34,8 @@ Ce guide vous explique comment déployer iComptaBudget avec Docker et Docker Com
    ```
 
 4. **Accès à l'application**
-   - Interface web : http://localhost:3000
-   - API Health check : http://localhost:3000/api/health
+   - Interface web : http://localhost:2112
+   - API Health check : http://localhost:2112/api/health
 
 ## 📁 Fichiers Docker
 
@@ -56,7 +56,7 @@ Image multi-stage optimisée pour la production.
 ### Variables d'environnement (.env)
 ```bash
 NODE_ENV=production
-FRONTEND_PORT=3000        # Port d'exposition
+FRONTEND_PORT=2112        # Port d'exposition
 TZ=Europe/Paris          # Timezone
 ```
 
@@ -106,7 +106,7 @@ docker compose exec icomptabudget sh
 ### Health check
 ```bash
 # Test de santé de l'API
-curl http://localhost:3000/api/health
+curl http://localhost:2112/api/health
 
 # Logs du conteneur
 docker compose logs icomptabudget
@@ -169,7 +169,7 @@ docker compose logs -f icomptabudget
 ```
 ┌─────────────────────────────────────┐
 │           Frontend (React)          │
-│         Port 3000 (exposé)          │
+│         Port 2112 (exposé)          │
 ├─────────────────────────────────────┤
 │           Backend (Node.js)         │
 │         Port interne seulement      │

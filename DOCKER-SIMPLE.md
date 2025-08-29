@@ -4,7 +4,7 @@ Configuration Docker simplifiée pour iComptaBudget avec serveur unifié.
 
 ## 🎯 Architecture
 
-- **Serveur unifié** : Un seul port exposé (3000) qui sert le frontend et l'API
+- **Serveur unifié** : Un seul port exposé (2112) qui sert le frontend et l'API
 - **Backend intégré** : L'API backend est accessible via `/api/*` mais non exposée directement
 - **Sécurité** : Seul le port frontend est accessible de l'extérieur
 
@@ -32,8 +32,8 @@ docker-compose -f docker-compose.github.yml up --build -d
 
 ## 🌍 Accès à l'application
 
-- **Frontend** : http://localhost:3000
-- **API** : http://localhost:3000/api/health (test)
+- **Frontend** : http://localhost:2112
+- **API** : http://localhost:2112/api/health (test)
 - **Backend** : Non exposé directement (seulement via /api/*)
 
 ## 📁 Fichiers Docker
@@ -50,7 +50,7 @@ docker-compose -f docker-compose.github.yml up --build -d
 ### Variables d'environnement (.env)
 ```bash
 NODE_ENV=production
-FRONTEND_PORT=3000
+FRONTEND_PORT=2112
 TZ=Europe/Paris
 ```
 
@@ -80,7 +80,7 @@ docker-compose down
 docker system prune
 
 # Test de santé
-curl http://localhost:3000/api/health
+ curl http://localhost:2112/api/health
 ```
 
 ## 🏗️ Construction de l'image
