@@ -47,74 +47,67 @@ COPY --from=deps --chown=appuser:nodejs /app/backend ./backend
 
 # Créer un serveur unifié qui sert le frontend et l'API
 COPY --chown=appuser:nodejs <<'EOF' ./server.js
-const express = require('express');
+// Minimal unified server without external deps.
+// Starts the backend (which uses its own node_modules) and serves the static frontend.
+const http = require('http');
+const fs = require('fs');
 const path = require('path');
 
-// Importer le backend
-const backendApp = express();
-
-// Configurer le backend (reprendre la config du backend/index.js)
-const config = require('./backend/src/config');
-const corsMiddleware = require('./backend/src/middleware/cors');
-const { ensureDataDbExists, migrateDataDb } = require('./backend/src/services/projectService');
-
-// Import route modules
-const projectsRoutes = require('./backend/src/routes/projects');
-const settingsRoutes = require('./backend/src/routes/settings');
-const accountsRoutes = require('./backend/src/routes/accounts');
-const transactionsRoutes = require('./backend/src/routes/transactions');
-const accountPreferencesRoutes = require('./backend/src/routes/accountPreferences');
-const monthlySavingsRoutes = require('./backend/src/routes/monthlySavings');
-const autoMapRoutes = require('./backend/src/routes/autoMap');
-const splitProjectsRoutes = require('./backend/src/routes/splitProjects');
-
-// Configure backend middleware
-backendApp.use(corsMiddleware);
-backendApp.use(express.json());
-
-// Configure backend routes
-backendApp.use('/api/projects', projectsRoutes);
-backendApp.use('/api', settingsRoutes);
-backendApp.use('/api/accounts', accountsRoutes);
-backendApp.use('/api/transactions', transactionsRoutes);
-backendApp.use('/api/account-preferences', accountPreferencesRoutes);
-backendApp.use('/api/monthly-savings', monthlySavingsRoutes);
-backendApp.use('/api/auto-map', autoMapRoutes);
-backendApp.use('/api/split-projects', splitProjectsRoutes);
-
-// Health check endpoint
-backendApp.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Servir les fichiers statiques du frontend
-backendApp.use(express.static(path.join(__dirname, 'public')));
-
-// Fallback pour le routing côté client (SPA)
-backendApp.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Start backend (it will initialize its own Express server on port 4000)
+require('./backend/index.js');
 
 const PORT = process.env.PORT || 3000;
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// Initialiser la base de données et démarrer le serveur
-async function startServer() {
-  try {
-    console.log('Ensuring data DB exists...');
-    await ensureDataDbExists();
-    console.log('Migrating data DB...');
-    await migrateDataDb();
-    console.log('Starting unified server...');
-    backendApp.listen(PORT, '0.0.0.0', () => {
-      console.log(`Application running on http://0.0.0.0:${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
+function proxyApi(req, res) {
+  const options = {
+    hostname: '127.0.0.1',
+    port: 4000,
+    path: req.url,
+    method: req.method,
+    headers: req.headers,
+  };
+  const proxy = http.request(options, (pres) => {
+    res.writeHead(pres.statusCode, pres.headers);
+    pres.pipe(res, { end: true });
+  });
+  proxy.on('error', () => {
+    res.writeHead(502);
+    res.end('Bad Gateway');
+  });
+  req.pipe(proxy, { end: true });
 }
 
-startServer();
+function serveStatic(req, res) {
+  let filePath = path.join(PUBLIC_DIR, decodeURIComponent(req.url.split('?')[0] || '/'));
+  if (filePath.endsWith(path.sep)) filePath = path.join(filePath, 'index.html');
+  if (!filePath.startsWith(PUBLIC_DIR)) {
+    res.writeHead(400); res.end('Invalid path'); return;
+  }
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      const index = path.join(PUBLIC_DIR, 'index.html');
+      fs.readFile(index, (e, data) => {
+        if (e) { res.writeHead(500); res.end('Server error'); return; }
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(data);
+      });
+      return;
+    }
+    const stream = fs.createReadStream(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    const mime = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml'}[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime });
+    stream.pipe(res);
+  });
+}
+
+const server = http.createServer((req, res) => {
+  if (req.url && req.url.startsWith('/api')) return proxyApi(req, res);
+  serveStatic(req, res);
+});
+
+server.listen(PORT, '0.0.0.0', () => console.log(`Frontend server running on http://0.0.0.0:${PORT}`));
 EOF
 
 # Créer les répertoires de données
