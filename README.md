@@ -117,11 +117,11 @@ Les comptes exclus ne seront pas pris en compte dans les calculs de solde.
 ### Utilisation de iCompta
 J'utilise iCompta de la façon suivante : 
 5 Catégories principales qui contiennent des sous-catégories :
-- 00. Revenus : Contient toutes les catégories de mes rentrées d'argents
-- 01. Needs : Contient les catégories de dépenses obligatoires par mois (courses alimentaire, crédit immo, assurances, eau, EDF...)
-- 02. Wants : Contient les catégories des dépenses que je pourrais considéré comme facultative si pb financier (cadeaux, sortie, travaux, loisirs, restaurant)
-- 99. Projets Financés : Contient les catégories des dépenses de projets qui ne sont pas du quotidien pour faire ces dépenses j'ai épargné tout au long de l'année (Vacances>Trajet, Vacances>Hebergement...Provisions => J'en reparle plus bas)
-- Hors budget : Contient toutes les catégories qui ne sont pas de l'argent que je compte (virement interne, note de frais remboursées, avance/remboursement d'argent)
+- **00. Revenus** : Contient toutes les catégories de mes rentrées d'argents
+- **01. Needs** : Contient les catégories de dépenses obligatoires par mois (courses alimentaire, crédit immo, assurances, eau, EDF...)
+- **02. Wants** : Contient les catégories des dépenses que je pourrais considéré comme facultative si pb financier (cadeaux, sortie, travaux, loisirs, restaurant)
+- **99. Projets Financés** : Contient les catégories des dépenses de projets qui ne sont pas du quotidien pour faire ces dépenses j'ai épargné tout au long de l'année (Vacances>Trajet, Vacances>Hebergement...Provisions => J'en reparle plus bas)
+- **Hors budget** : Contient toutes les catégories qui ne sont pas de l'argent que je compte (virement interne, note de frais remboursées, avance/remboursement d'argent)
 
 Tous les mois je classifie mes dépenses à la fin du mois je fais Revenus - Needs - Wants -> cela donne le montant que j'ai épargné dans le mois. 
 Ce montant je vais le virer sur un compte d'épargne type livret et je vais ensuite splité le crédit sur le compte d'épargne en autant d'opération que d'affectation à des projets. Je mets la catégorie Hors budget > Virement d'épargne et je renseigne le projet. 
