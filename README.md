@@ -67,11 +67,11 @@ npm install
 npm run dev:all
 
 # Ou séparément :
-npm run dev        # Frontend (port 3000)
+npm run dev        # Frontend (port 2112)
 npm run dev:back   # Backend (port 4000)
 ```
 
-L'application sera accessible à `http://localhost:3000`
+L'application sera accessible à `http://localhost:2112`
 
 ### Configuration Initiale
 1. **Premier lancement** : L'assistant vous guidera pour configurer l'URL Dropbox
