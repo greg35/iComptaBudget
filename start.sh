@@ -26,14 +26,14 @@ fi
 
 # Construire et démarrer
 echo "🏗️  Construction et démarrage de l'application..."
-docker-compose up --build -d
+docker compose up --build -d
 
 echo "⏱️  Attente du démarrage complet..."
 sleep 10
 
 # Vérifier le statut
 echo "📊 Statut de l'application :"
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "✅ iComptaBudget est maintenant accessible !"
@@ -41,7 +41,7 @@ echo "🌍 Frontend : http://localhost:3000"
 echo "🔧 API interne (non exposée) : disponible via /api/*"
 echo ""
 echo "📋 Commandes utiles :"
-echo "  docker-compose logs -f    # Voir les logs"
-echo "  docker-compose stop       # Arrêter"
-echo "  docker-compose restart    # Redémarrer"
+echo "  docker compose logs -f    # Voir les logs"
+echo "  docker compose stop       # Arrêter"
+echo "  docker compose restart    # Redémarrer"
 echo "  curl http://localhost:3000/api/health  # Test de santé"

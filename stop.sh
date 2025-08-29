@@ -4,7 +4,7 @@
 
 echo "🛑 Arrêt d'iComptaBudget..."
 
-docker-compose down
+docker compose down
 
 echo "✅ Application arrêtée"
 echo ""

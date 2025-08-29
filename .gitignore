@@ -69,6 +69,10 @@ Application\ de\ Gestion\ du\ Budget.zip
 backend.log
 combined-dev.log
 
+# Répertoires de données Docker
+data/
+logs/
+
 # Cache directories
 .cache/
 .parcel-cache/
