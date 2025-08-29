@@ -86,22 +86,30 @@ router.post('/refresh', async (req, res) => {
     const accounts = [];
     
     try {
-      const result = mainDb.exec("SELECT ID, name FROM ICAccount ORDER BY name");
+      const qBal = `
+          SELECT a.ID as id, a.name as name, a.type as type
+          FROM ICAccount a
+          where a.hidden = 0 and a."type" IS NOT NULL
+        `;
+      const result = mainDb.exec(qBal);
+      
       if (result && result[0]) {
         const cols = result[0].columns;
         for (const row of result[0].values) {
           const account = {};
           cols.forEach((col, i) => account[col] = row[i]);
           accounts.push({
-            id: String(account.ID),
-            name: account.Name || ''
+            id: String(account.id),
+            name: account.name || ''
           });
         }
       }
     } finally {
       mainDb.close();
     }
-
+    // Debug: log accounts array
+    console.log('Accounts from main DB:', accounts);
+    
     // Update preferences database
     if (!fs.existsSync(config.DATA_DB_PATH)) {
       return res.status(500).json({ error: 'data DB missing' });

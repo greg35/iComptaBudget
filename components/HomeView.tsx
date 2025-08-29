@@ -33,7 +33,7 @@ export function HomeView({ projects, savingsAccounts }: HomeViewProps) {
   // Données pour le graphique de répartition épargne libre/allouée
   const balanceDistribution = [
     { name: 'Épargne libre', value: Math.max(0, freeBalance), color: '#00C49F' },
-    { name: 'Épargne allouée', value: Math.max(0, totalCurrentSavings), color: '#0088FE' }
+    { name: 'Épargne allouée', value: Math.max(0, totalCurrentSavings), color: '#fea500ff' }
   ].filter(item => item.value > 0); // Filtrer les valeurs nulles
 
   // Données pour le graphique des projets actifs

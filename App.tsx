@@ -23,7 +23,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(null as string | null);
   const [projects, setProjects] = useState([] as Project[]);
   const [loadingProjects, setLoadingProjects] = useState(false as boolean);
-  const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [isFirstStartup, setIsFirstStartup] = useState<boolean | null>(null);
   const [checkingFirstStartup, setCheckingFirstStartup] = useState(true);
 
@@ -128,7 +128,7 @@ export default function App() {
     
     (async () => {
       try {
-        const res = await fetch('/api/accounts?folder=Disponible&excludeTypes=checking');
+        const res = await fetch('/api/accounts?excluded=false');
         if (!res.ok) throw new Error('failed to fetch accounts');
         const data = await res.json();
         if (!mounted) return;
@@ -160,7 +160,7 @@ export default function App() {
   const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
     (async () => {
       try {
-        const res = await fetch(`/api/project-transactions?project=${encodeURIComponent(projectKey)}`);
+        const res = await fetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
         if (!res.ok) throw new Error('failed to fetch project transactions');
         const data = await res.json();
         if (!mounted) return;

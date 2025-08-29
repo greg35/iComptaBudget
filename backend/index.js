@@ -29,13 +29,6 @@ app.use('/api/monthly-savings', monthlySavingsRoutes);
 app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
 
-// Legacy endpoint for project transactions (for frontend compatibility)
-app.use('/api/project-transactions', (req, res, next) => {
-  // Redirect to the correct endpoint in the transactions router
-  req.url = '/project-transactions' + (req.url === '/' ? '' : req.url);
-  transactionsRoutes(req, res, next);
-});
-
 // Start server
 const port = config.PORT;
 console.log('Starting server with port:', port);
