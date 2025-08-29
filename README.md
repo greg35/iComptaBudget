@@ -1,7 +1,10 @@
 
 # iCompta Budget
 
-Une application web moderne pour la gestion de budget personnel avec suivi de projets et analyse d'épargne mensuelle, intégrée avec iCompta.
+Une application web moderne pour la gestion de budget personnel avec suivi de projets et analyse d'épargne mensuelle, cette application se base sur la superbe application iCompta https://www.icompta-app.fr/.
+Elle me permettra de mieux gérer mon budget pour mes différents projets.
+
+
 
 ## ✨ Fonctionnalités
 
