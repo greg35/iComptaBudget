@@ -32,7 +32,7 @@ Une application web moderne pour la gestion de budget personnel avec suivi de pr
 1. Cloner le repository
 ```bash
 git clone [url-du-repository]
-cd NewiComptaBudget
+cd iComptaBudget
 ```
 
 2. Installer les dépendances
