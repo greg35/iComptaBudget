@@ -4,6 +4,8 @@
 Une application web moderne pour la gestion de budget personnel avec suivi de projets et analyse d'épargne mensuelle, cette application se base sur la superbe application iCompta https://www.icompta-app.fr/.
 Elle me permettra de mieux gérer mon budget pour mes différents projets.
 
+![alt text](https://github.com/greg35/iComptaBudget/blob/main/screenshot/01.Accueil.png?raw=true)
+![alt text](https://github.com/greg35/iComptaBudget/blob/main/screenshot/02.DetailProjet.png?raw=true)
 
 
 ## ✨ Fonctionnalités
@@ -129,11 +131,11 @@ J'utilise iCompta de la façon suivante :
 Tous les mois je classifie mes dépenses à la fin du mois je fais Revenus - Needs - Wants -> cela donne le montant que j'ai épargné dans le mois. 
 Ce montant je vais le virer sur un compte d'épargne type livret et je vais ensuite splité le crédit sur le compte d'épargne en autant d'opération que d'affectation à des projets. Je mets la catégorie Hors budget > Virement d'épargne et je renseigne le projet. 
 
-Ex :
+![alt text](https://github.com/greg35/iComptaBudget/blob/main/screenshot/TransactionEpargne.png?raw=true)
 
 A la fin du mois je fais également un virement d'un compte d'épargne vers mon compte courant pour équilibrer la catégorie "99. Projets financiers"
 
-Ex :
+![alt text](https://github.com/greg35/iComptaBudget/blob/main/screenshot/TransactionProvision.png?raw=true)
 
 ## 🗄️ Base de Données
 
