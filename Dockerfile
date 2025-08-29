@@ -42,8 +42,10 @@ RUN adduser --system --uid 1001 appuser
 # Copier le frontend buildé
 COPY --from=builder --chown=appuser:nodejs /app/build ./public
 
-# Copier le backend avec ses dépendances
-COPY --from=deps --chown=appuser:nodejs /app/backend ./backend
+# Copier le backend source (depuis builder) et ses node_modules (depuis deps)
+# Le stage 'deps' n'a que les node_modules backend, le code source vient du stage 'builder'.
+COPY --from=builder --chown=appuser:nodejs /app/backend ./backend
+COPY --from=deps --chown=appuser:nodejs /app/backend/node_modules ./backend/node_modules
 
 # Créer un serveur unifié qui sert le frontend et l'API
 COPY --chown=appuser:nodejs <<'EOF' ./server.js
