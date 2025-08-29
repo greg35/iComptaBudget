@@ -7,7 +7,7 @@ const config = {
   PROJECTS_FILE: path.join(__dirname, '..', '..', 'projects.json'),
   
   // Server configuration
-  PORT: process.env.PORT || 4000,
+  PORT: process.env.PORT || 2113,
   HOST: '127.0.0.1',
   
   // CORS configuration

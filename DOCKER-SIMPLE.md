@@ -93,7 +93,7 @@ Le Dockerfile utilise un build multi-stage :
 ## 🔒 Sécurité
 
 - Utilisateur non-root dans le conteneur
-- Port backend (4000) non exposé
+- Port backend (2113) non exposé
 - Fichier iCompta en lecture seule
 - Variables d'environnement sécurisées
 

@@ -22,7 +22,7 @@ export async function updateAccounts({
       return false;
     }
 
-    const response = await fetch('http://127.0.0.1:4000/api/update-accounts', {
+    const response = await fetch('http://127.0.0.1:2113/api/update-accounts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

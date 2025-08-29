@@ -159,7 +159,7 @@ docker compose logs -f icomptabudget
 ## 🔒 Sécurité
 
 - ✅ Utilisateur non-root dans le conteneur
-- ✅ Port backend (4000) non exposé
+- ✅ Port backend (2113) non exposé
 - ✅ Fichier iCompta en lecture seule
 - ✅ Health check intégré
 - ✅ Restart automatique sauf arrêt manuel

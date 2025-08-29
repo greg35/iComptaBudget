@@ -68,7 +68,7 @@ npm run dev:all
 
 # Ou séparément :
 npm run dev        # Frontend (port 2112)
-npm run dev:back   # Backend (port 4000)
+npm run dev:back   # Backend (port 2113)
 ```
 
 L'application sera accessible à `http://localhost:2112`
