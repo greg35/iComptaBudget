@@ -168,7 +168,6 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
                       </div>
                     </th>
                   ))}
-                  <th className="text-right py-3 px-4 font-medium min-w-24 bg-muted/30">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -180,14 +179,9 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
                     </td>
                     {savingsData.map(monthData => (
                       <td key={monthData.month} className="text-right py-3 px-4">
-                        {formatCurrency(monthData.projectBreakdown[project.id] || 0)}
+                        {formatCurrency(monthData.projectBreakdown[project.name] || 0)}
                       </td>
                     ))}
-                    <td className="text-right py-3 px-4 font-semibold bg-muted/30">
-                      {formatCurrency(
-                        savingsData.reduce((sum, month) => sum + (month.projectBreakdown[project.id] || 0), 0)
-                      )}
-                    </td>
                   </tr>
                 ))}
                 
@@ -205,14 +199,6 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
                       </td>
                     );
                   })}
-                  <td className="text-right py-3 px-4 font-semibold bg-muted/30 text-muted-foreground">
-                    {formatCurrency(
-                      savingsData.reduce((sum, month) => {
-                        const totalAffected = getTotalForMonth(month);
-                        return sum + (month.totalSavings - totalAffected);
-                      }, 0)
-                    )}
-                  </td>
                 </tr>
               </tbody>
               <tfoot>
@@ -223,9 +209,6 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
                       {formatCurrency(monthData.totalSavings)}
                     </td>
                   ))}
-                  <td className="text-right py-3 px-4 font-bold bg-muted/30">
-                    {formatCurrency(savingsData.reduce((sum, month) => sum + month.totalSavings, 0))}
-                  </td>
                 </tr>
               </tfoot>
             </table>

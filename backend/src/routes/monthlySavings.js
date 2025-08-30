@@ -10,13 +10,16 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const months = parseInt(req.query.months) || 6;
-    console.log('Monthly savings calculation requested for', months, 'months');
+    //console.log('Monthly savings calculation requested for', months, 'months');
     
     if (!fs.existsSync(config.DB_PATH)) {
       console.log('Main database not found, returning empty monthly savings');
       return res.json([]);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////
+    ////
+    ////////////////////////////////////////////////////////////////////////////////////////
     // Get accounts that are included in checking (expense) calculations
     let includedAccountIds = [];
     if (fs.existsSync(config.DATA_DB_PATH)) {
@@ -34,7 +37,7 @@ router.get('/', async (req, res) => {
           includedAccountIds = prefsResult[0].values.map(row => row[0]);
         }
         prefsDb.close();
-        console.log('Found', includedAccountIds.length, 'accounts included in checking:', includedAccountIds);
+        //console.log('Found', includedAccountIds.length, 'accounts included in checking:', includedAccountIds);
       } catch (e) {
         console.error('Error loading account preferences for monthly savings:', e && e.message);
         return res.status(500).json({ error: 'Failed to load account preferences: ' + e.message });
@@ -47,6 +50,9 @@ router.get('/', async (req, res) => {
       return res.json([]);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////
+    ////
+    ////////////////////////////////////////////////////////////////////////////////////////
     const db = await openDb();
     
     // Load projects from data DB to get the project breakdown
@@ -57,12 +63,11 @@ router.get('/', async (req, res) => {
         const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
         const prefsDb = new SQL.Database(filebuffer);
         
-        const projectsResult = prefsDb.exec(`SELECT id, name, dbProject FROM projects ORDER BY name`);
+        const projectsResult = prefsDb.exec(`SELECT id, name FROM projects ORDER BY name`);
         if (projectsResult && projectsResult[0]) {
           projects = projectsResult[0].values.map(row => ({
             id: row[0],
             name: row[1],
-            dbProject: row[2] // This is the key used in ICTransactionSplit.project
           }));
         }
         prefsDb.close();
@@ -92,12 +97,26 @@ router.get('/', async (req, res) => {
     try {
       // Calculate for each month
       for (let i = months - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const monthLabel = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+        // Use a more robust way to calculate months by working with year/month directly
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth(); // 0-based (0=January, 11=December)
+        
+        // Calculate target month/year by going back i months
+        let targetMonth = currentMonth - i;
+        let targetYear = currentYear;
+        
+        // Handle year overflow
+        while (targetMonth < 0) {
+          targetMonth += 12;
+          targetYear--;
+        }
+        
+        const monthKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+        
+        // Create a proper date for the first day of the target month for labeling
+        const labelDate = new Date(targetYear, targetMonth, 1);
+        const monthLabel = labelDate.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
         
         console.log(`Processing month: ${monthKey} (${monthLabel})`);
         
@@ -135,12 +154,49 @@ router.get('/', async (req, res) => {
         if (totalResult && totalResult[0] && totalResult[0].values && totalResult[0].values[0]) {
           totalSavings = Number(totalResult[0].values[0][0]) || 0;
         }
+      
+        ////////////////////////////////////////////////////////////////////////////////////////
+        ////
+        ////////////////////////////////////////////////////////////////////////////////////////
+        // Get accounts that are included in checking (expense) calculations
+        let includedAccountSavingsIds = [];
+        if (fs.existsSync(config.DATA_DB_PATH)) {
+          try {
+            const SQL = await initSqlJs();
+            const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
+            const prefsDb = new SQL.Database(filebuffer);
+            
+            // Get accounts included in checking/expenses
+            const prefsResult = prefsDb.exec(`
+              SELECT accountId FROM account_preferences 
+              WHERE includeSavings = 1
+            `);
+            if (prefsResult && prefsResult[0]) {
+              includedAccountSavingsIds = prefsResult[0].values.map(row => row[0]);
+            }
+            prefsDb.close();
+            console.log('Found', includedAccountSavingsIds.length, 'accounts included in savings:', includedAccountSavingsIds);
+          } catch (e) {
+            console.error('Error loading account preferences for monthly savings:', e && e.message);
+            return res.status(500).json({ error: 'Failed to load account preferences: ' + e.message });
+          }
+        }
+
+        // If no specific accounts are included, fall back to empty result
+        if (includedAccountSavingsIds.length === 0) {
+          console.log('No accounts Savings included in savings calculations');
+          return res.json([]);
+        } 
         
         // Calculate project breakdown
         const projectBreakdown = {};
-        
+        const accountFilterSavings = includedAccountSavingsIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+
+        console.log(`Projects : ${projects}`);
+
         for (const project of projects) {
-          const projectKey = project.dbProject || project.id; // Use dbProject if available, fallback to id
+          // Use the project name directly since ICTransactionSplit.project contains the project name as text
+          const projectKey = project.name; // Use project name directly
           
           // Calculate savings for this specific project using similar logic as computeCurrentSavingsSql
           let projectQuery;
@@ -155,7 +211,7 @@ router.get('/', async (req, res) => {
               LEFT JOIN ICTransaction t ON s."transaction" = t.ID
               WHERE s.project = '${escProject}' 
                 AND s.category IN (${inList})
-                AND t.account IN (${accountFilter})
+                AND t.account IN (${accountFilterSavings})
                 AND strftime('%Y-%m', t.date) = '${monthKey}'
             `;
           } else {
@@ -166,17 +222,18 @@ router.get('/', async (req, res) => {
               LEFT JOIN ICTransaction t ON s."transaction" = t.ID
               LEFT JOIN ICCategory c1 ON s.category = c1.ID 
               WHERE s.project = '${escProject}' 
-                AND t.account IN (${accountFilter})
+                AND t.account IN (${accountFilterSavings})
                 AND strftime('%Y-%m', t.date) = '${monthKey}'
                 AND (lower(c1.name) LIKE '%virements d''épargne%' OR lower(c1.name) = 'epargne')
             `;
           }
-          
+          console.log(`Query : ${projectQuery}`);
+
           const projectResult = db.exec(projectQuery);
           if (projectResult && projectResult[0] && projectResult[0].values && projectResult[0].values[0]) {
             const projectAmount = Number(projectResult[0].values[0][0]) || 0;
             if (projectAmount > 0) {
-              projectBreakdown[project.id] = projectAmount;
+              projectBreakdown[project.name] = projectAmount;
             }
           }
         }
