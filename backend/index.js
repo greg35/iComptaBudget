@@ -10,6 +10,7 @@ const accountsRoutes = require('./src/routes/accounts');
 const transactionsRoutes = require('./src/routes/transactions');
 const accountPreferencesRoutes = require('./src/routes/accountPreferences');
 const monthlySavingsRoutes = require('./src/routes/monthlySavings');
+const savingsAmountsRoutes = require('./src/routes/savingsAmounts');
 const autoMapRoutes = require('./src/routes/autoMap');
 const splitProjectsRoutes = require('./src/routes/splitProjects');
 
@@ -26,6 +27,7 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/account-preferences', accountPreferencesRoutes);
 app.use('/api/monthly-savings', monthlySavingsRoutes);
+app.use('/api/savings-amounts', savingsAmountsRoutes);
 app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
 

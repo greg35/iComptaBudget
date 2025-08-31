@@ -1,10 +1,11 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
+import { VersionInfo } from "./VersionInfo";
 import { useState } from "react";
 
 interface ProjectsSidebarProps {
@@ -16,9 +17,11 @@ interface ProjectsSidebarProps {
   onViewChange: (view: ViewType) => void;
   onCreateProject: (project: Omit<Project, 'id' | 'currentSavings' | 'currentSpent'>) => void;
   onShowActiveOnlyChange: (showActiveOnly: boolean) => void;
+  onUpdateAccounts?: () => void;
+  isUpdatingAccounts?: boolean;
 }
 
-export function ProjectsSidebar({ projects, selectedProjectId, currentView, showActiveOnly, onProjectSelect, onViewChange, onCreateProject, onShowActiveOnlyChange }: ProjectsSidebarProps) {
+export function ProjectsSidebar({ projects, selectedProjectId, currentView, showActiveOnly, onProjectSelect, onViewChange, onCreateProject, onShowActiveOnlyChange, onUpdateAccounts, isUpdatingAccounts }: ProjectsSidebarProps) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const fmt = (v?: number | null) => new Intl.NumberFormat('fr-FR').format(Number(v ?? 0));
   // sort projects by name descending (Z -> A), handle missing names
@@ -72,6 +75,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
               <span>Épargne Mensuelle</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('month-breakdown')}
+              isActive={currentView === 'month-breakdown'}
+              className="w-full"
+            >
+              <Calendar className="h-4 w-4" />
+              <span>Épargne par Mois</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
 
         <Separator className="mb-4" />
@@ -98,18 +111,33 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
 
             
       <SidebarFooter className="p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => onViewChange('settings')}
-              isActive={currentView === 'settings'}
-              className="w-full"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Paramètres</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex gap-2">
+          <SidebarMenu className="flex-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => onViewChange('settings')}
+                isActive={currentView === 'settings'}
+                className="w-full h-10"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Paramètres</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <Button
+            onClick={onUpdateAccounts}
+            disabled={!onUpdateAccounts || isUpdatingAccounts}
+            size="sm"
+            variant="outline"
+            className="w-12 h-10 p-0 flex-shrink-0"
+            title="Mettre à jour les comptes"
+          >
+            <RotateCw className={`h-4 w-4 ${isUpdatingAccounts ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+        <div className="flex justify-center mt-2">
+          <VersionInfo className="opacity-70" />
+        </div>
       </SidebarFooter>
 
       <CreateProjectForm

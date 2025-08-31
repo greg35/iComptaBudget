@@ -1,6 +1,6 @@
 {
       "name": "icomptabudget",
-      "version": "0.1.0",
+      "version": "1.1.0",
       "private": true,
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
@@ -59,6 +59,15 @@
             "dev": "vite",
             "dev:back": "node backend/index.js",
             "dev:all": "concurrently \"npm run dev:back\" \"npm run dev\"",
-            "build": "vite build"
+            "build": "vite build",
+            "version:patch": "npm version patch",
+            "version:minor": "npm version minor",
+            "version:major": "npm version major",
+            "version:show": "node -p \"require('./package.json').version\"",
+            "release:patch": "./scripts/release.sh patch",
+            "release:minor": "./scripts/release.sh minor",
+            "release:major": "./scripts/release.sh major",
+            "preversion": "npm run build",
+            "postversion": "git push && git push --tags"
       }
 }

@@ -7,11 +7,13 @@ import { TransactionsList } from "./components/TransactionsList";
 import { HomeView } from "./components/HomeView";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
+import { MonthBreakdownView } from "./components/MonthBreakdownView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
+import { updateAccounts } from "./utils/accountsApi";
 
 // Projects will be loaded from backend at runtime
 // Load savings accounts from backend (accounts under folder 'Disponible')
@@ -26,6 +28,7 @@ export default function App() {
   const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [isFirstStartup, setIsFirstStartup] = useState<boolean | null>(null);
   const [checkingFirstStartup, setCheckingFirstStartup] = useState(true);
+  const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false);
 
   // Check if this is first startup (no database exists)
   useEffect(() => {
@@ -56,6 +59,34 @@ export default function App() {
     return () => { mounted = false; };
   }, []);
 
+  const loadProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const res = await fetch('/api/projects');
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const data = await res.json();
+      // normalize values to ensure numbers (avoid toLocaleString on null/strings)
+      const normalized = (data || []).map((p: any) => ({
+        id: String(p.id ?? p.name ?? ''),
+        name: p.name ?? String(p.id ?? ''),
+        startDate: p.startDate ?? '',
+        endDate: p.endDate ?? '',
+        plannedBudget: Number(p.plannedBudget ?? 0) || 0,
+        currentSavings: Number(p.currentSavings ?? 0) || 0,
+        currentSpent: Number(p.currentSpent ?? 0) || 0,
+        archived: Boolean(p.archived), // Include archived property from database
+        // preserve the original DB project key (string stored in ICTransactionSplit.project)
+        dbProject: p.dbProject ?? null,
+      } as any));
+      setProjects(normalized);
+      if (!selectedProjectId && normalized && normalized.length > 0) setSelectedProjectId(String(normalized[0].id));
+    } catch (e) {
+      console.error('Could not load projects:', e);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   // fetch projects from backend on mount
   useEffect(() => {
     let mounted = true;
@@ -63,31 +94,8 @@ export default function App() {
     if (isFirstStartup === true) return;
     
     (async () => {
-      setLoadingProjects(true);
-      try {
-        const res = await fetch('/api/projects');
-        if (!res.ok) throw new Error('Failed to fetch projects');
-        const data = await res.json();
-        if (!mounted) return;
-        // normalize values to ensure numbers (avoid toLocaleString on null/strings)
-        const normalized = (data || []).map((p: any) => ({
-          id: String(p.id ?? p.name ?? ''),
-          name: p.name ?? String(p.id ?? ''),
-          startDate: p.startDate ?? '',
-          endDate: p.endDate ?? '',
-          plannedBudget: Number(p.plannedBudget ?? 0) || 0,
-          currentSavings: Number(p.currentSavings ?? 0) || 0,
-          currentSpent: Number(p.currentSpent ?? 0) || 0,
-          archived: Boolean(p.archived), // Include archived property from database
-          // preserve the original DB project key (string stored in ICTransactionSplit.project)
-          dbProject: p.dbProject ?? null,
-        } as any));
-        setProjects(normalized);
-        if (!selectedProjectId && normalized && normalized.length > 0) setSelectedProjectId(String(normalized[0].id));
-      } catch (e) {
-        console.error('Could not load projects:', e);
-      } finally {
-        if (mounted) setLoadingProjects(false);
+      if (mounted) {
+        await loadProjects();
       }
     })();
     return () => { mounted = false; };
@@ -399,6 +407,22 @@ export default function App() {
     setDropboxUrl(url);
   };
 
+  const handleUpdateAccounts = async () => {
+    setIsUpdatingAccounts(true);
+    try {
+      const success = await updateAccounts({
+        requireDropboxUrl: true,
+        dropboxUrl: dropboxUrl
+      });
+      if (success) {
+        // Reload projects after updating accounts
+        loadProjects();
+      }
+    } finally {
+      setIsUpdatingAccounts(false);
+    }
+  };
+
   const handleFirstStartupComplete = () => {
     setIsFirstStartup(false);
     // Force reload of all data after first startup is complete
@@ -439,6 +463,8 @@ export default function App() {
           onViewChange={handleViewChange}
           onCreateProject={handleCreateProject}
           onShowActiveOnlyChange={setShowActiveOnly}
+          onUpdateAccounts={handleUpdateAccounts}
+          isUpdatingAccounts={isUpdatingAccounts}
         />
         
         <main className="flex-1 p-6 space-y-6">
@@ -454,6 +480,11 @@ export default function App() {
             />
           ) : currentView === "monthly-savings" ? (
             <MonthlySavingsView
+              projects={projects}
+              showActiveOnly={showActiveOnly}
+            />
+          ) : currentView === "month-breakdown" ? (
+            <MonthBreakdownView
               projects={projects}
               showActiveOnly={showActiveOnly}
             />

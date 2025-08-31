@@ -7,6 +7,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Settings, Save, Check, Download, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import { updateAccounts } from "../utils/accountsApi";
+import { VersionInfo } from "./VersionInfo";
+
 
 interface AccountPreference {
   accountId: string;
@@ -525,7 +527,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Version:</span>
-              <span>1.0.0</span>
+              <span><VersionInfo className="opacity-70" /></span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Dernière mise à jour:</span>

@@ -2,9 +2,16 @@
   import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
+  import { readFileSync } from 'fs';
+
+  // Lire la version depuis package.json
+  const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 
   export default defineConfig({
     plugins: [react()],
+    define: {
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
