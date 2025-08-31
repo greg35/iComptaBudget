@@ -79,6 +79,8 @@ echo_success "Application construite avec succès"
 # Mettre à jour la version
 echo_info "Mise à jour de la version ($VERSION_TYPE)..."
 NEW_VERSION=$(npm version $VERSION_TYPE --no-git-tag-version)
+# Supprimer le préfixe 'v' si présent
+NEW_VERSION=${NEW_VERSION#v}
 echo_success "Nouvelle version: $NEW_VERSION"
 
 # Construire à nouveau avec la nouvelle version
@@ -87,8 +89,8 @@ npm run build
 
 # Créer le commit et le tag
 git add .
-git commit -m "chore: release $NEW_VERSION"
-git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+git commit -m "chore: release v$NEW_VERSION"
+git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
 
 echo_success "Commit et tag créés"
 
@@ -97,11 +99,11 @@ echo_info "Push des changements vers le dépôt distant..."
 git push origin main
 git push origin --tags
 
-echo_success "Release $NEW_VERSION terminée avec succès! 🎉"
+echo_success "Release v$NEW_VERSION terminée avec succès! 🎉"
 
 # Afficher les informations de release
 echo_info "Informations de release:"
-echo "  - Version: $NEW_VERSION"
+echo "  - Version: v$NEW_VERSION"
 echo "  - Branche: $CURRENT_BRANCH"
 echo "  - Commit: $(git rev-parse --short HEAD)"
-echo "  - Tag: $NEW_VERSION"
+echo "  - Tag: v$NEW_VERSION"
