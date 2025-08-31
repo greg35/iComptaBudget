@@ -78,9 +78,8 @@ echo_success "Application construite avec succès"
 
 # Mettre à jour la version
 echo_info "Mise à jour de la version ($VERSION_TYPE)..."
-NEW_VERSION=$(npm version $VERSION_TYPE --no-git-tag-version)
-# Supprimer le préfixe 'v' si présent
-NEW_VERSION=${NEW_VERSION#v}
+npm version $VERSION_TYPE --no-git-tag-version > /dev/null 2>&1
+NEW_VERSION=$(node -p "require('./package.json').version")
 echo_success "Nouvelle version: $NEW_VERSION"
 
 # Construire à nouveau avec la nouvelle version
