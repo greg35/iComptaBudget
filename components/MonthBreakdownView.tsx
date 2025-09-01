@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project } from '../types/budget';
+import { Project, ProjectSavingGoal } from '../types/budget';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -34,7 +34,21 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
+  // État pour les objectifs d'épargne
+  const [projectGoals, setProjectGoals] = useState<{ [projectId: string]: ProjectSavingGoal[] }>({});
+
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+
+  // Fonction pour récupérer l'objectif applicable pour un projet et un mois
+  const getGoalForMonth = (projectId: string, month: string): number | null => {
+    const goals = projectGoals[projectId] || [];
+    const targetDate = month + '-01';
+    const activeGoal = goals.find(goal => 
+      goal.startDate <= targetDate && 
+      (!goal.endDate || goal.endDate >= targetDate)
+    );
+    return activeGoal ? activeGoal.amount : null;
+  };
 
   const goToPreviousMonth = () => {
     console.log('Going to previous month from:', selectedMonth, selectedYear);
@@ -160,6 +174,23 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     }
   };
 
+  const loadProjectGoals = async () => {
+    const goalsCache: { [projectId: string]: ProjectSavingGoal[] } = {};
+    
+    for (const project of projects) {
+      try {
+        const response = await fetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
+        if (response.ok) {
+          const goals = await response.json();
+          goalsCache[project.id] = goals;
+        }
+      } catch (e) {
+        console.error('Error loading project goals:', e);
+      }
+    }
+    setProjectGoals(goalsCache);
+  };
+
   useEffect(() => {
     console.log('MonthBreakdownView useEffect triggered:', {
       projectsLength: projects.length,
@@ -170,6 +201,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     });
     if (projects.length > 0) {
       fetchCurrentMonthData();
+      loadProjectGoals();
     }
   }, [projects, showActiveOnly, selectedMonth, selectedYear]);
 
@@ -189,14 +221,16 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
             <Calendar className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Épargne par Mois</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled className="h-8 w-8 p-0">
+          <div className="flex items-center justify-between w-[32rem] min-w-[32rem]">
+            <Button variant="outline" size="sm" disabled className="h-8 w-8 p-0 flex-shrink-0">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-lg font-medium min-w-[200px] text-center">
-              {selectedMonth}/{selectedYear}
-            </span>
-            <Button variant="outline" size="sm" disabled className="h-8 w-8 p-0">
+            <div className="flex-1 text-center px-4">
+              <span className="text-lg font-medium whitespace-nowrap">
+                {selectedMonth}/{selectedYear}
+              </span>
+            </div>
+            <Button variant="outline" size="sm" disabled className="h-8 w-8 p-0 flex-shrink-0">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -221,11 +255,8 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
 
   // Calculer les données pour chaque projet
   const projectTargets = filteredProjects.map(project => {
-    // Calculer l'objectif mensuel basé sur le budget planifié et la durée du projet
-    const startDate = new Date(project.startDate);
-    const endDate = new Date(project.endDate);
-    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
-    const monthlyTarget = monthsDiff > 0 ? project.plannedBudget / monthsDiff : 0;
+    // Récupérer l'objectif mensuel depuis la table project_saving_goals
+    const monthlyTarget = getGoalForMonth(project.id, monthKey) || 0;
     
     const currentSavings = currentMonthData?.projectBreakdown 
       ? (currentMonthData.projectBreakdown[project.name] || 0)
@@ -379,7 +410,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
               <thead>
                 <tr className="border-b">
                   <th className="text-left px-4 py-3 font-medium">Projet</th>
-                  <th className="text-right px-6 py-3 font-medium">Objectif Mensuel</th>
+                  <th className="text-left px-6 py-3 font-medium">Objectif Mensuel</th>
                   <th className="px-6 py-3 font-medium">
                     <div className="flex items-center justify-end">
                       Épargne iCompta
@@ -393,7 +424,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
                 {projectTargets.map((target) => (
                   <tr key={target.projectId} className="border-b hover:bg-muted/50">
                     <td className="px-4 py-3 font-medium">{target.projectName}</td>
-                    <td className="px-6 py-3 text-right">{formatCurrency(target.monthlyTarget)}</td>
+                    <td className="px-6 py-3 text-left">{formatCurrency(target.monthlyTarget)}</td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-end">
                         <span>{formatCurrency(target.currentSavings)}</span>

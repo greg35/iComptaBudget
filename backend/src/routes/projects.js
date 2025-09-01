@@ -190,6 +190,67 @@ router.post('/', async (req, res) => {
     if (idRes && idRes[0] && idRes[0].values && idRes[0].values[0]) {
       projectId = idRes[0].values[0][0];
     }
+
+    // Tentative d'initialisation d'un objectif mensuel initial si la table existe et que les infos sont complètes
+    try {
+      if (startDate && endDate && budget > 0) {
+        const tableCheck = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='project_saving_goals'");
+        const hasGoalsTable = tableCheck && tableCheck[0] && tableCheck[0].values.length > 0;
+        if (hasGoalsTable) {
+          const startMonth = String(startDate).slice(0,7);
+          const endMonth = String(endDate).slice(0,7);
+          if (/^\d{4}-\d{2}$/.test(startMonth) && /^\d{4}-\d{2}$/.test(endMonth)) {
+            const todayMonth = new Date().toISOString().slice(0,7);
+            // Fonction utilitaire pour index mois
+            const monthIndex = (ym) => {
+              const [y,m] = ym.split('-').map(Number); return y*12 + (m-1);
+            };
+            const startIdx = monthIndex(startMonth);
+            const endIdx = monthIndex(endMonth);
+            const todayIdx = monthIndex(todayMonth);
+            if (endIdx >= startIdx) {
+              // Calcul de l'épargne déjà réalisée si DB principale dispo
+              let saved = 0;
+              try {
+                if (fs.existsSync(config.DB_PATH)) {
+                  const SQLMain = await initSqlJs();
+                  const mainBuf = fs.readFileSync(config.DB_PATH);
+                  const mainDb = new SQLMain.Database(mainBuf);
+                  const escName = escapedName; // name déjà échappé
+                  const savingsRes = mainDb.exec(`SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s WHERE s.project='${escName}'`);
+                  if (savingsRes && savingsRes[0] && savingsRes[0].values[0] && savingsRes[0].values[0][0] != null) {
+                    saved = Number(savingsRes[0].values[0][0]) || 0;
+                  }
+                  mainDb.close();
+                }
+              } catch (e2) {
+                console.error('Failed to compute initial saved amount', e2 && e2.message);
+              }
+
+              // Reste à épargner
+              let remaining = Math.max(0, budget - saved);
+              // Déterminer mois de début de l'objectif initial: si projet déjà commencé -> mois courant, sinon mois de début du projet
+              let goalStartMonth = startMonth;
+              if (todayIdx > startIdx && todayIdx <= endIdx) {
+                goalStartMonth = todayMonth; // on repart depuis le mois en cours
+              } else if (todayIdx > endIdx) {
+                // Projet déjà terminé: aucun objectif utile
+                remaining = 0;
+              }
+              const goalStartIdx = monthIndex(goalStartMonth);
+              const remainingMonths = (endIdx - goalStartIdx) + 1;
+              if (remainingMonths > 0 && remaining > 0) {
+                const monthly = Math.ceil(remaining / remainingMonths); // Arrondi à l'euro supérieur
+                const startDay = goalStartMonth + '-01';
+                db.run(`INSERT INTO project_saving_goals (project_id, amount, start_date, end_date, reason) VALUES (${parseInt(projectId)}, ${monthly}, '${startDay}', NULL, 'initial')`);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to init initial saving goal for project', e && e.message);
+    }
     
     const proj = {
       id: String(projectId || Math.random().toString(36).substr(2,9)),

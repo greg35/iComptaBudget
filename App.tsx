@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Project, Transaction, MonthlyData, SavingsAccount, ViewType } from "./types/budget";
 import { ProjectsSidebar } from "./components/ProjectsSidebar";
 import { ProjectHeader } from "./components/ProjectHeader";
+import { ProjectSavingGoalsPanel } from "./components/ProjectSavingGoalsPanel";
 import { BudgetChart } from "./components/BudgetChart";
 import { TransactionsList } from "./components/TransactionsList";
 import { HomeView } from "./components/HomeView";
@@ -499,6 +500,7 @@ export default function App() {
                 onArchiveProject={handleArchiveProject}
                 onDeleteProject={handleDeleteProject}
               />
+              <ProjectSavingGoalsPanel projectId={selectedProject.id} />
               <BudgetChart data={chartData} projectName={selectedProject.name} />
               <TransactionsList transactions={projectTransactions} />
             </>

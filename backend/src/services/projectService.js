@@ -290,6 +290,14 @@ async function migrateDataDb() {
     const binary = db.export();
     fs.writeFileSync(config.DATA_DB_PATH, Buffer.from(binary));
     db.close();
+
+    // Exécuter migrations incrémentales séparées (ex: project_saving_goals)
+    try {
+      const migrateSavingGoals = require('../migrations/003-project-saving-goals');
+      await migrateSavingGoals();
+    } catch (e) {
+      console.error('Failed running migration 003-project-saving-goals:', e && e.message);
+    }
   } catch (e) {
     console.error('Database migration failed:', e && e.message);
   }

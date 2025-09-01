@@ -13,6 +13,7 @@ const monthlySavingsRoutes = require('./src/routes/monthlySavings');
 const savingsAmountsRoutes = require('./src/routes/savingsAmounts');
 const autoMapRoutes = require('./src/routes/autoMap');
 const splitProjectsRoutes = require('./src/routes/splitProjects');
+const savingGoalsRoutes = require('./src/routes/savingGoals');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/monthly-savings', monthlySavingsRoutes);
 app.use('/api/savings-amounts', savingsAmountsRoutes);
 app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
+app.use('/api/saving-goals', savingGoalsRoutes);
 
 // Start server
 const port = config.PORT;

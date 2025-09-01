@@ -205,6 +205,12 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
         // Calculate project breakdown from iCompta transactions (not from saved amounts)
         const projectBreakdown = {};
         
+        // Create a mapping from project names to IDs
+        const projectNameToId = {};
+        projects.forEach(project => {
+          projectNameToId[project.name] = project.id;
+        });
+        
         // Optimisation: Récupérer toutes les données des projets en une seule requête
         if (projects.length > 0) {
           let allProjectsQuery;
@@ -246,7 +252,14 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
                 const projectName = row[0];
                 const projectSavings = Number(row[1]) || 0;
                 if (projectSavings > 0) {
-                  projectBreakdown[projectName] = projectSavings;
+                  // Use project ID as key instead of project name
+                  const projectId = projectNameToId[projectName];
+                  if (projectId) {
+                    projectBreakdown[projectId] = projectSavings;
+                  } else {
+                    // Fallback to name if ID not found (for backward compatibility)
+                    projectBreakdown[projectName] = projectSavings;
+                  }
                 }
               }
             }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Project } from "../types/budget";
+import { Project, ProjectSavingGoal } from "../types/budget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { TrendingUp, Calendar } from "lucide-react";
@@ -16,9 +16,14 @@ interface MonthlySavingsData {
   projectBreakdown: { [projectId: string]: number };
 }
 
+interface ProjectGoalsCache {
+  [projectId: string]: ProjectSavingGoal[];
+}
+
 export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsViewProps) {
   const [monthsToShow, setMonthsToShow] = useState<3 | 6 | 12>(6);
   const [savingsData, setSavingsData] = useState<MonthlySavingsData[]>([]);
+  const [projectGoals, setProjectGoals] = useState<ProjectGoalsCache>({});
   const [loading, setLoading] = useState(true);
 
   // Filtrer les projets selon showActiveOnly
@@ -29,7 +34,38 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
 
   useEffect(() => {
     loadMonthlySavingsData();
-  }, [monthsToShow, projects]);
+    loadProjectGoals();
+  }, [monthsToShow, projects, showActiveOnly]);
+
+  const loadProjectGoals = async () => {
+    const goalsCache: ProjectGoalsCache = {};
+    try {
+      const promises = filteredProjects.map(async (project) => {
+        try {
+          const response = await fetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
+          if (response.ok) {
+            goalsCache[project.id] = await response.json();
+          }
+        } catch (e) {
+          console.error(`Failed to load goals for project ${project.id}:`, e);
+        }
+      });
+      await Promise.all(promises);
+    } catch (e) {
+      console.error('Error loading project goals:', e);
+    }
+    setProjectGoals(goalsCache);
+  };
+
+  const getGoalForMonth = (projectId: string, month: string): number | null => {
+    const goals = projectGoals[projectId] || [];
+    const targetDate = month + '-01';
+    const activeGoal = goals.find(goal => 
+      goal.startDate <= targetDate && 
+      (!goal.endDate || goal.endDate >= targetDate)
+    );
+    return activeGoal ? activeGoal.amount : null;
+  };
 
   const loadMonthlySavingsData = async () => {
     setLoading(true);
@@ -85,6 +121,20 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
 
   const getTotalForMonth = (monthData: MonthlySavingsData) => {
     return Object.values(monthData.projectBreakdown).reduce((sum, amount) => sum + amount, 0);
+  };
+
+  // Somme des objectifs de tous les projets (filtrés) pour un mois donné
+  const getAggregatedGoalForMonth = (month: string): number | null => {
+    let total = 0;
+    let hasAny = false;
+    for (const project of filteredProjects) {
+      const goal = getGoalForMonth(project.id, month);
+      if (goal !== null) {
+        total += goal;
+        hasAny = true;
+      }
+    }
+    return hasAny ? total : null;
   };
 
   if (loading) {
@@ -158,20 +208,26 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-medium sticky left-0 bg-background">Projet</th>
-                  {savingsData.map(monthData => (
-                    <th key={monthData.month} className="text-right py-3 px-4 font-medium min-w-32">
-                      <div className="flex flex-col items-end">
-                        <span>{monthData.label}</span>
-                        <span className="text-xs font-normal text-muted-foreground mt-1">
-                          Total: {formatCurrency(monthData.totalSavings)}
-                        </span>
-                      </div>
-                    </th>
-                  ))}
+                  {savingsData.map(monthData => {
+                    const aggGoal = getAggregatedGoalForMonth(monthData.month);
+                    return (
+                      <th key={monthData.month} className="text-right py-3 px-4 font-medium min-w-40">
+                        <div className="flex flex-col items-end">
+                          <span>{monthData.label}</span>
+                          <span className="text-xs font-normal text-muted-foreground mt-1">
+                            Obj: {aggGoal !== null ? formatCurrency(aggGoal) : '—'}
+                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            Épargné: {formatCurrency(monthData.totalSavings)}
+                          </span>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {/* Ligne pour chaque projet */}
+                {/* Ligne pour chaque projet - épargne réelle */}
                 {filteredProjects.map(project => (
                   <tr key={project.id} className="border-b hover:bg-muted/50">
                     <td className="py-3 px-4 font-medium sticky left-0 bg-background">
@@ -179,7 +235,17 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
                     </td>
                     {savingsData.map(monthData => (
                       <td key={monthData.month} className="text-right py-3 px-4">
-                        {formatCurrency(monthData.projectBreakdown[project.name] || 0)}
+                        <div className="flex flex-col items-end">
+                          <span className="font-medium">
+                            {formatCurrency(monthData.projectBreakdown[project.id] || 0)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Obj: {(() => {
+                              const goal = getGoalForMonth(project.id, monthData.month);
+                              return goal !== null ? formatCurrency(goal) : "—";
+                            })()}
+                          </span>
+                        </div>
                       </td>
                     ))}
                   </tr>
