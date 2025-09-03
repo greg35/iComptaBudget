@@ -55,7 +55,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// Start backend (it will initialize its own Express server on port 4000)
+// Start backend (it will initialize its own Express server on port 2113)
 require('./backend/index.js');
 
 const PORT = process.env.PORT || 2112;
@@ -64,7 +64,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 function proxyApi(req, res) {
   const options = {
     hostname: '127.0.0.1',
-    port: 4000,
+    port: 2113,
     path: req.url,
     method: req.method,
     headers: req.headers,
@@ -112,8 +112,9 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => console.log(`Frontend server running on http://0.0.0.0:${PORT}`));
 EOF
 
-# Créer les répertoires de données
-RUN mkdir -p /app/data /app/logs && chown -R appuser:nodejs /app/data /app/logs
+# Dossier données hors du code
+ENV DATA_DIR=/data
+RUN mkdir -p /data /app/logs && chown -R appuser:nodejs /data /app/logs
 
 USER appuser
 
