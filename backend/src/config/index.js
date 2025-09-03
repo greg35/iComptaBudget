@@ -3,7 +3,7 @@ const path = require('path');
 const config = {
   // Database paths (remonte de deux niveaux depuis src/config)
   DB_PATH: path.join(__dirname, '..', '..', '..', 'Comptes.cdb'),
-  DATA_DB_PATH: path.join(__dirname, '..', '..', '..', 'iComptaBudgetData.sqlite'),
+  DATA_DB_PATH: process.env.DATA_DB_PATH || path.join(process.cwd(), 'data', 'iComptaBudgetData.sqlite'),
   PROJECTS_FILE: path.join(__dirname, '..', '..', 'projects.json'),
   
   // Server configuration
