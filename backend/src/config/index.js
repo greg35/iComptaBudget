@@ -1,8 +1,8 @@
 const path = require('path');
 
 const config = {
-  // Database paths (remonte de deux niveaux depuis src/config)
-  DB_PATH: path.join(__dirname, '..', '..', '..', 'Comptes.cdb'),
+  // Database paths - both in /data directory for Docker compatibility
+  DB_PATH: process.env.DB_PATH || path.join(process.cwd(), 'data', 'Comptes.cdb'),
   DATA_DB_PATH: process.env.DATA_DB_PATH || path.join(process.cwd(), 'data', 'iComptaBudgetData.sqlite'),
   PROJECTS_FILE: path.join(__dirname, '..', '..', 'projects.json'),
   
