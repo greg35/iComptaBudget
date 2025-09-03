@@ -2,7 +2,7 @@
 FROM node:18-alpine AS base
 
 # Installer les dépendances système
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat sqlite
 
 # Stage 1: Installation des dépendances
 FROM base AS deps
@@ -42,20 +42,17 @@ RUN adduser --system --uid 1001 appuser
 # Copier le frontend buildé
 COPY --from=builder --chown=appuser:nodejs /app/build ./public
 
-# Copier le backend source (depuis builder) et ses node_modules (depuis deps)
-# Le stage 'deps' n'a que les node_modules backend, le code source vient du stage 'builder'.
+# Copier le backend source et ses node_modules
 COPY --from=builder --chown=appuser:nodejs /app/backend ./backend
 COPY --from=deps --chown=appuser:nodejs /app/backend/node_modules ./backend/node_modules
 
 # Créer un serveur unifié qui sert le frontend et l'API
 COPY --chown=appuser:nodejs <<'EOF' ./server.js
-// Minimal unified server without external deps.
-// Starts the backend (which uses its own node_modules) and serves the static frontend.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// Start backend (it will initialize its own Express server on port 2113)
+// Start backend
 require('./backend/index.js');
 
 const PORT = process.env.PORT || 2112;
@@ -112,17 +109,22 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => console.log(`Frontend server running on http://0.0.0.0:${PORT}`));
 EOF
 
-# Dossier données hors du code
-ENV DATA_DIR=/data
-RUN mkdir -p /data /app/logs && chown -R appuser:nodejs /data /app/logs
+# Créer les répertoires nécessaires avec les bonnes permissions
+RUN mkdir -p /app/data /app/logs && \
+    chown -R appuser:nodejs /app/data /app/logs && \
+    chmod 755 /app/data /app/logs
+
+# Variables d'environnement pour les chemins de base de données
+ENV DB_PATH=/app/data/Comptes.cdb
+ENV DATA_DB_PATH=/app/data/iComptaBudgetData.sqlite
 
 USER appuser
 
-# Exposer seulement le port du serveur unifié
+# Exposer le port du serveur unifié
 EXPOSE 2112
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "const http = require('http'); const options = { host: 'localhost', port: 2112, path: '/api/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
+# Health check amélioré
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "const http = require('http'); const options = { host: 'localhost', port: 2112, path: '/api/health', timeout: 5000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
 
 CMD ["node", "server.js"]
