@@ -52,6 +52,42 @@ Le script `release.sh` effectue automatiquement :
 5. 📝 Création du commit de release
 6. 🏷️ Création du tag Git
 7. 📤 Push vers le dépôt distant
+8. 🚀 **Création automatique de la release GitHub**
+9. 📋 **Génération des notes de release**
+
+### 📋 Notes de release automatiques
+
+Le script génère automatiquement :
+- **Liste des commits** depuis la dernière release
+- **Liens de comparaison** entre versions
+- **Notes formatées** avec emojis et sections
+
+### 🛠️ Prérequis pour les releases GitHub
+
+Pour que la création de release GitHub fonctionne, vous devez installer et configurer GitHub CLI :
+
+```bash
+# 1. Installer GitHub CLI (macOS)
+brew install gh
+
+# 1. Installer GitHub CLI (Linux/WSL)
+# Ubuntu/Debian
+sudo apt install gh
+# Ou avec snap
+sudo snap install gh
+
+# 1. Installer GitHub CLI (Windows)
+# Télécharger depuis https://cli.github.com/
+# Ou avec Chocolatey: choco install gh
+
+# 2. S'authentifier avec votre compte GitHub
+gh auth login
+
+# 3. Vérifier l'authentification
+gh auth status
+```
+
+**⚠️ Important :** Si GitHub CLI n'est pas installé ou configuré, le script continuera et créera seulement le tag Git local, sans la release GitHub.
 
 ## 📱 Affichage dans l'interface
 
@@ -137,6 +173,26 @@ Si la version ne s'affiche pas correctement :
 1. Vérifiez que Vite est redémarré après modification du `vite.config.ts`
 2. Vérifiez la console pour les erreurs TypeScript
 3. Assurez-vous que `__APP_VERSION__` est défini dans la config Vite
+
+### ❌ Problèmes de release GitHub
+
+Si la création de release GitHub échoue :
+
+```bash
+# Vérifier l'installation de GitHub CLI
+gh --version
+
+# Vérifier l'authentification
+gh auth status
+
+# Re-authentifier si nécessaire
+gh auth login
+
+# Créer une release manuellement
+gh release create v1.0.0 --title "Release v1.0.0" --notes "Description"
+```
+
+**Note :** Si GitHub CLI n'est pas disponible, le script continuera et créera seulement le tag Git.
 
 ## 📚 Ressources
 

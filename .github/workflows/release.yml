@@ -1,0 +1,77 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      packages: write
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 📥 Install dependencies
+        run: npm ci
+        
+      - name: 🏗️ Build application
+        run: npm run build
+        
+      - name: 📊 Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          
+      - name: 📋 Generate release notes
+        id: release_notes
+        run: |
+          # Récupérer le tag précédent
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            echo "## 🚀 Nouveautés" > release_notes.md
+            echo "" >> release_notes.md
+            git log --oneline --no-merges $PREVIOUS_TAG..HEAD | head -20 >> release_notes.md
+            echo "" >> release_notes.md
+            echo "## 📋 Changements complets" >> release_notes.md
+            echo "Voir tous les changements: [\`$PREVIOUS_TAG...${{ steps.version.outputs.tag }}\`](https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ steps.version.outputs.tag }})" >> release_notes.md
+          else
+            echo "## 🚀 Release ${{ steps.version.outputs.tag }}" > release_notes.md
+            echo "" >> release_notes.md
+            echo "Nouvelle version de iComptaBudget avec corrections et améliorations." >> release_notes.md
+          fi
+          
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: 🚀 Release ${{ steps.version.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 🐳 Build and push Docker image
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "🐳 Building Docker image for ${{ steps.version.outputs.tag }}"
+          # Commandes Docker ici si nécessaire
+          # docker build -t ghcr.io/greg35/icomptabudget:${{ steps.version.outputs.version }} .
+          # docker push ghcr.io/greg35/icomptabudget:${{ steps.version.outputs.version }}

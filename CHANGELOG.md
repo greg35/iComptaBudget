@@ -5,6 +5,72 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.4.2]
+
+### Ajouté
+- Création automatique de releases GitHub avec notes générées
+- Action GitHub pour automatisation des releases
+- Documentation améliorée pour le système de versioning
+
+### Modifié
+- Script de release amélioré avec support GitHub CLI
+- Prérequis pour les releases GitHub documentés
+
+## [1.4.1] - 2025-09-02
+
+### Corrigé
+- Correction du calcul de `projectBreakdown` dans l'API monthly-savings
+- Intégration des allocations manuelles dans le breakdown mensuel
+- Affichage correct des montants par projet dans MonthlySavingsView
+
+### Technique
+- Utilisation correcte de sql.js pour les requêtes d'allocations
+- Évitement du double comptage entre données iCompta et allocations manuelles
+
+## [1.4.0] - 2025-09-02
+
+### Ajouté
+- Édition inline des noms de projets avec composant NameEditor
+- Interface d'édition intuitive avec hover et clic
+- Sauvegarde automatique des modifications de nom
+- Gestion d'erreurs pour l'édition des noms
+
+### Modifié
+- Interface ProjectHeader avec édition de nom intégrée
+- Amélioration de l'expérience utilisateur pour l'édition
+
+## [1.3.0] - 2025-09-02
+
+### Ajouté
+- Système d'allocation manuelle d'épargne par projet
+- API pour la gestion des allocations mensuelles par projet
+- Interface d'édition des montants d'épargne avec InlineAmountEditor
+- Objectifs d'épargne par projet avec saving goals
+- Badges colorés pour le statut des projets
+
+### Modifié
+- Logique de calcul de currentSavings pour inclure les allocations manuelles
+- Filtrage des transactions avec flag isManual pour éviter le double comptage
+- Interface utilisateur plus intuitive pour l'édition des montants
+
+### Corrigé
+- Double comptage entre données iCompta et allocations manuelles
+- Affichage des badges avec les bonnes couleurs
+- Gestion des apostrophes dans les textes français pour les requêtes SQL
+
+## [1.2.0] - 2025-09-01
+
+### Ajouté
+- Séparation des préoccupations entre données et code
+- Migration des données utilisateur vers un répertoire dédié
+- Configuration Docker améliorée avec volumes spécifiques
+- Documentation sur les bonnes pratiques de sécurité
+
+### Sécurité
+- Déplacement de la base de données hors du répertoire backend
+- Permissions restrictives pour les fichiers de données
+- Configuration d'environnement sécurisée
+
 ## [1.1.0] - 2025-08-31
 
 ### Ajouté
@@ -20,6 +86,32 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### Corrigé
 - Performance lente lors du changement de mois dans l'épargne mensuelle
+
+## [1.0.0] - 2025-08-30
+
+### Ajouté
+- Application de gestion de budget initiale
+- Gestion des projets et épargne
+- Interface de suivi mensuel
+- Intégration avec iCompta
+- Sidebar avec navigation
+- Bouton de mise à jour des comptes
+
+### Fonctionnalités
+- Calcul automatique de l'épargne depuis iCompta
+- Ventilation par projet
+- Interface responsive
+- Gestion des comptes Dropbox
+
+## Types de changements
+
+- `Ajouté` pour les nouvelles fonctionnalités
+- `Modifié` pour les changements dans les fonctionnalités existantes
+- `Obsolète` pour les fonctionnalités qui seront bientôt supprimées
+- `Supprimé` pour les fonctionnalités supprimées
+- `Corrigé` pour les corrections de bugs
+- `Sécurité` pour les vulnérabilités corrigées
+- `Technique` pour les changements techniques sans impact utilisateur
 
 ## [1.0.0] - 2025-08-30
 

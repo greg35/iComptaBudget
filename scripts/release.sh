@@ -98,6 +98,67 @@ echo_info "Push des changements vers le dépôt distant..."
 git push origin main
 git push origin --tags
 
+# Créer la release GitHub
+echo_info "Création de la release GitHub..."
+
+# Vérifier si GitHub CLI est installé
+if ! command -v gh &> /dev/null; then
+    echo_error "GitHub CLI (gh) n'est pas installé. Installation requise pour créer des releases."
+    echo_info "Installation: brew install gh (macOS) ou https://cli.github.com/"
+    echo_warning "Le tag a été créé mais pas la release GitHub"
+    exit 1
+fi
+
+# Vérifier l'authentification GitHub
+if ! gh auth status &> /dev/null; then
+    echo_error "GitHub CLI n'est pas authentifié. Exécutez: gh auth login"
+    echo_warning "Le tag a été créé mais pas la release GitHub"
+    exit 1
+fi
+
+# Générer les notes de release automatiquement
+RELEASE_NOTES=""
+
+# Essayer de récupérer les commits depuis la dernière release
+LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+if [[ -n "$LAST_TAG" ]]; then
+    echo_info "Génération des notes de release depuis $LAST_TAG..."
+    
+    # Récupérer les commits depuis le dernier tag
+    COMMITS=$(git log --oneline "$LAST_TAG"..HEAD --no-merges | head -20)
+    
+    if [[ -n "$COMMITS" ]]; then
+        RELEASE_NOTES="## 🚀 Nouveautés
+
+$COMMITS
+
+## 📋 Changements complets
+Voir tous les changements: [\`$LAST_TAG...v$NEW_VERSION\`](https://github.com/greg35/iComptaBudget/compare/$LAST_TAG...v$NEW_VERSION)"
+    fi
+fi
+
+# Notes de release par défaut si aucun commit trouvé
+if [[ -z "$RELEASE_NOTES" ]]; then
+    RELEASE_NOTES="## 🚀 Release v$NEW_VERSION
+
+Nouvelle version de iComptaBudget avec corrections et améliorations.
+
+Pour plus de détails, consultez le [CHANGELOG.md](https://github.com/greg35/iComptaBudget/blob/main/CHANGELOG.md)."
+fi
+
+# Créer la release GitHub
+if gh release create "v$NEW_VERSION" \
+    --title "🚀 Release v$NEW_VERSION" \
+    --notes "$RELEASE_NOTES" \
+    --target main; then
+    echo_success "Release GitHub créée: https://github.com/greg35/iComptaBudget/releases/tag/v$NEW_VERSION"
+else
+    echo_error "Erreur lors de la création de la release GitHub"
+    echo_warning "Le tag a été créé mais pas la release GitHub"
+    exit 1
+fi
+
 echo_success "Release v$NEW_VERSION terminée avec succès! 🎉"
 
 # Afficher les informations de release
@@ -106,3 +167,4 @@ echo "  - Version: v$NEW_VERSION"
 echo "  - Branche: $CURRENT_BRANCH"
 echo "  - Commit: $(git rev-parse --short HEAD)"
 echo "  - Tag: v$NEW_VERSION"
+echo "  - Release: https://github.com/greg35/iComptaBudget/releases/tag/v$NEW_VERSION"
