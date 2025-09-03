@@ -50,6 +50,16 @@ async function syncProjectsFromMainDb() {
 async function ensureDataDbExists() {
   const SQL = await initSqlJs();
 
+  // S'assurer que le dossier contenant la DB existe (et tenter de corriger permissions basiques)
+  try {
+    const dir = require('path').dirname(config.DATA_DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (e) {
+    console.error('Impossible de créer le dossier pour la base de données:', e && e.message);
+  }
+
   // If file does not exist, create and populate it
   if (!fs.existsSync(config.DATA_DB_PATH)) {
     const outDb = new SQL.Database();

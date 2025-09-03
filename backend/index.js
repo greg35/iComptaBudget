@@ -37,6 +37,11 @@ app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
 app.use('/api/saving-goals', savingGoalsRoutes);
 
+// Endpoint de healthcheck simple (utilisé par Docker HEALTHCHECK)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Start server
 const port = config.PORT;
 console.log('Starting server with port:', port);

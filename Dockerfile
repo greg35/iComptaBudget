@@ -109,16 +109,61 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => console.log(`Frontend server running on http://0.0.0.0:${PORT}`));
 EOF
 
-# Créer les répertoires nécessaires avec les bonnes permissions
-RUN mkdir -p /app/data /app/logs && \
-    chown -R appuser:nodejs /app/data /app/logs && \
-    chmod 777 /app/data /app/logs
+# Créer les répertoires nécessaires avec les bonnes permissions (et dossier /data unifié)
+RUN mkdir -p /app/data /app/logs /data && \
+  chown -R appuser:nodejs /app/data /app/logs /data || true && \
+  chmod 775 /app/data /app/logs /data || true
 
-# Variables d'environnement pour les chemins de base de données
-ENV DB_PATH=/app/data/Comptes.cdb
-ENV DATA_DB_PATH=/app/data/iComptaBudgetData.sqlite
+# Variables d'environnement pour les chemins de base de données (par défaut /data)
+ENV DATA_DIR=/data
+ENV DB_PATH=/data/Comptes.cdb
+ENV DATA_DB_PATH=/data/iComptaBudgetData.sqlite
 
-USER appuser
+# Installer su-exec pour drop de privilèges propre
+RUN apk add --no-cache su-exec bash
+
+# Définir shell par défaut et alias pratique
+ENV SHELL=/bin/bash
+COPY <<'EOF' /etc/profile.d/aliases.sh
+alias l='ls -l'
+EOF
+
+# Script d'entrypoint pour ajuster permissions dynamiques quand volume monté
+COPY <<'EOF' /entrypoint.sh
+#!/bin/sh
+set -e
+
+APP_USER=appuser
+APP_GROUP=nodejs
+DATA_DIR=${DATA_DIR:-/data}
+
+mkdir -p "$DATA_DIR" /app/logs || true
+
+# Si root, tenter de réparer ownership si pas writable par l'utilisateur cible
+if [ "$(id -u)" = "0" ]; then
+  if [ ! -w "$DATA_DIR" ]; then
+    chown -R "$APP_USER:$APP_GROUP" "$DATA_DIR" || true
+  fi
+  chown -R "$APP_USER:$APP_GROUP" /app/logs || true
+fi
+
+# Pré-créer les fichiers DB si absents (évite EACCES lors du premier write)
+[ -n "$DB_PATH" ] && [ ! -e "$DB_PATH" ] && touch "$DB_PATH" || true
+[ -n "$DATA_DB_PATH" ] && [ ! -e "$DATA_DB_PATH" ] && touch "$DATA_DB_PATH" || true
+
+# Autorisations minimales (rw pour user, r pour groupe)
+chmod 660 "$DATA_DB_PATH" 2>/dev/null || true
+
+echo "[entrypoint] DATA_DIR=$DATA_DIR DB_PATH=$DB_PATH DATA_DB_PATH=$DATA_DB_PATH"
+
+if [ "$(id -u)" = "0" ]; then
+  exec su-exec "$APP_USER:$APP_GROUP" node server.js
+else
+  exec node server.js
+fi
+EOF
+
+RUN chmod +x /entrypoint.sh
 
 # Exposer le port du serveur unifié
 EXPOSE 2112
@@ -127,4 +172,4 @@ EXPOSE 2112
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "const http = require('http'); const options = { host: 'localhost', port: 2112, path: '/api/health', timeout: 5000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["/entrypoint.sh"]
