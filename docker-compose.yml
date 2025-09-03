@@ -5,14 +5,14 @@ services:
     ports:
       - "${FRONTEND_PORT:-2112}:2112"
     volumes:
-      - /docker/icomptabudget/data:/app/data
+      - /docker/icomptabudget/data:/data
     environment:
       - NODE_ENV=production
       - FRONTEND_PORT=2112
       - TZ=${TZ:-Europe/Paris}
       # Database paths configuration
-      - DB_PATH=/app/data/Comptes.cdb
-      - DATA_DB_PATH=/app/data/iComptaBudgetData.sqlite
+      - DB_PATH=/data/Comptes.cdb
+      - DATA_DB_PATH=/data/iComptaBudgetData.sqlite
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: 2112, path: '/api/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]

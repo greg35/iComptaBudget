@@ -1,0 +1,27 @@
+services:
+  # Service optionnel pour le développement avec hot reload
+  icomptabudget-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: icomptabudget_dev
+    ports:
+      - "${FRONTEND_DEV_PORT:-2112}:2112"
+      - "${BACKEND_DEV_PORT:-2113}:2113"
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_PORT=2112
+      - BACKEND_PORT=2113
+      - TZ=${TZ:-Europe/Paris}
+      - DB_PATH=/app/data/Comptes.cdb
+      - DATA_DB_PATH=/app/data/iComptaBudgetData.sqlite
+    command: npm run dev:all
+    restart: unless-stopped
+    profiles:
+      - dev
