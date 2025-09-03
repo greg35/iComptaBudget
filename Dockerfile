@@ -112,7 +112,7 @@ EOF
 # Créer les répertoires nécessaires avec les bonnes permissions
 RUN mkdir -p /app/data /app/logs && \
     chown -R appuser:nodejs /app/data /app/logs && \
-    chmod 755 /app/data /app/logs
+    chmod 777 /app/data /app/logs
 
 # Variables d'environnement pour les chemins de base de données
 ENV DB_PATH=/app/data/Comptes.cdb
