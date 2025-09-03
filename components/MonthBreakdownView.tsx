@@ -1,14 +1,116 @@
-import React, { useState, useEffect } from 'react';
-import { Project, ProjectSavingGoal } from '../types/budget';
+import React, { useState, useEffect, useRef } from 'react';
+import { Project, ProjectSavingGoal, ProjectAllocation } from '../types/budget';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil } from 'lucide-react';
 
 interface MonthBreakdownViewProps {
   projects?: Project[];
   showActiveOnly?: boolean;
 }
+
+// Composant d'édition inline pour les montants
+interface InlineAmountEditorProps {
+  value: number;
+  onSave: (value: number) => Promise<void>;
+  formatValue?: (value: number) => string;
+  className?: string;
+  placeholder?: string;
+}
+
+const InlineAmountEditor: React.FC<InlineAmountEditorProps> = ({
+  value,
+  onSave,
+  formatValue = (v) => v.toString(),
+  className = "",
+  placeholder = "0"
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [isHovered, setIsHovered] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleClick = () => {
+    setIsEditing(true);
+    setEditValue(value.toString());
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const numValue = parseFloat(editValue) || 0;
+      await onSave(numValue);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      // En cas d'erreur, on reste en mode édition
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBlur = () => {
+    if (!isSaving) {
+      handleSave();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditValue("");
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center">
+        <Input
+          ref={inputRef}
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={`w-20 h-8 text-right ${className}`}
+          step="0.01"
+          placeholder={placeholder}
+          disabled={isSaving}
+        />
+        {isSaving && (
+          <div className="ml-2 animate-spin h-4 w-4 border border-gray-300 rounded-full border-t-blue-600" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className={`relative cursor-pointer group ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
+    >
+      <span className="select-none">
+        {formatValue(value)}
+      </span>
+      {isHovered && (
+        <Pencil className="absolute -right-6 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground opacity-70" />
+      )}
+    </div>
+  );
+};
 
 interface CurrentMonthData {
   month: string;
@@ -24,11 +126,8 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // États pour l'épargne libre
+  // État pour l'épargne libre (simplifié)
   const [freeSavings, setFreeSavings] = useState<number>(0);
-  const [editingFreeSavings, setEditingFreeSavings] = useState<boolean>(false);
-  const [editingFreeSavingsAmount, setEditingFreeSavingsAmount] = useState<string>("");
-  const [savingFreeSavings, setSavingFreeSavings] = useState<boolean>(false);
   
   // Navigation mensuelle
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
@@ -36,6 +135,9 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
 
   // État pour les objectifs d'épargne
   const [projectGoals, setProjectGoals] = useState<{ [projectId: string]: ProjectSavingGoal[] }>({});
+
+  // États pour la gestion des allocations (simplifié)
+  const [allocations, setAllocations] = useState<{ [key: string]: ProjectAllocation }>({});
 
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
@@ -79,33 +181,92 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     setSelectedYear(newYear);
   };
 
-  // Fonctions pour l'épargne libre
-  const handleEditFreeSavings = () => {
-    setEditingFreeSavings(true);
-    setEditingFreeSavingsAmount(freeSavings.toString());
-  };
-
-  const handleCancelFreeSavingsEdit = () => {
-    setEditingFreeSavings(false);
-    setEditingFreeSavingsAmount("");
-  };
-
-  const handleSaveFreeSavings = async () => {
+  // Fonction pour sauvegarder l'épargne libre avec le nouveau composant
+  const saveFreeSavingsInline = async (amount: number) => {
     try {
-      setSavingFreeSavings(true);
-      
-      // TODO: Créer une API pour sauvegarder l'épargne libre
-      // Pour l'instant, on sauvegarde localement
-      const newAmount = parseFloat(editingFreeSavingsAmount) || 0;
-      setFreeSavings(newAmount);
-      
-      setEditingFreeSavings(false);
-      setEditingFreeSavingsAmount("");
+      const response = await fetch('/api/monthly-manual-savings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          month: monthKey,
+          amount: amount,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde de l\'épargne libre');
+      }
+
+      setFreeSavings(amount);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'épargne libre:', error);
-      alert('Erreur lors de la sauvegarde de l\'épargne libre');
-    } finally {
-      setSavingFreeSavings(false);
+      throw error; // Re-lancer l'erreur pour que le composant inline la gère
+    }
+  };
+
+  // Fonctions pour gérer les allocations par projet
+  const getAllocationKey = (projectId: string, month: string) => `${projectId}-${month}`;
+
+  const getAllocatedAmount = (projectId: string, month: string) => {
+    const key = getAllocationKey(projectId, month);
+    return allocations[key]?.allocatedAmount || 0;
+  };
+
+  // Fonction pour sauvegarder une allocation avec le nouveau composant
+  const saveAllocationInline = async (projectId: string, amount: number) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:2113/api/project-allocations/${monthKey}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          allocations: [{ projectId, amount }]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde de l\'allocation');
+      }
+
+      // Mettre à jour l'état local
+      const key = getAllocationKey(projectId, monthKey);
+      setAllocations(prev => ({
+        ...prev,
+        [key]: {
+          id: key,
+          projectId,
+          month: monthKey,
+          allocatedAmount: amount
+        }
+      }));
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de l\'allocation:', error);
+      throw error; // Re-lancer l'erreur pour que le composant inline la gère
+    }
+  };
+
+  // Fonction pour charger les allocations existantes
+  const loadAllocations = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:2113/api/project-allocations/${monthKey}`);
+      if (response.ok) {
+        const allocationsArray = await response.json();
+        const allocationsMap: { [key: string]: ProjectAllocation } = {};
+        
+        allocationsArray.forEach((allocation: ProjectAllocation) => {
+          const key = getAllocationKey(allocation.projectId, allocation.month);
+          allocationsMap[key] = allocation;
+        });
+        
+        setAllocations(allocationsMap);
+      } else if (response.status !== 404) {
+        console.error('Erreur lors du chargement des allocations:', response.status);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des allocations:', error);
     }
   };
 
@@ -202,6 +363,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     if (projects.length > 0) {
       fetchCurrentMonthData();
       loadProjectGoals();
+      loadAllocations();
     }
   }, [projects, showActiveOnly, selectedMonth, selectedYear]);
 
@@ -258,9 +420,14 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     // Récupérer l'objectif mensuel depuis la table project_saving_goals
     const monthlyTarget = getGoalForMonth(project.id, monthKey) || 0;
     
-    const currentSavings = currentMonthData?.projectBreakdown 
+    // Utiliser l'allocation manuelle si elle existe, sinon utiliser les données iCompta
+    const allocatedAmount = getAllocatedAmount(project.id, monthKey);
+    const icomptaAmount = currentMonthData?.projectBreakdown 
       ? (currentMonthData.projectBreakdown[project.name] || 0)
       : 0;
+    
+    // Priorité à l'allocation manuelle si elle existe (> 0), sinon utiliser iCompta
+    const currentSavings = allocatedAmount > 0 ? allocatedAmount : icomptaAmount;
 
     const difference = currentSavings - monthlyTarget;
     const isTargetMet = difference >= 0;
@@ -427,7 +594,12 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
                     <td className="px-6 py-3 text-left">{formatCurrency(target.monthlyTarget)}</td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-end">
-                        <span>{formatCurrency(target.currentSavings)}</span>
+                        <InlineAmountEditor
+                          value={target.currentSavings}
+                          onSave={(amount) => saveAllocationInline(target.projectId, amount)}
+                          formatValue={(value) => formatCurrency(value)}
+                          className="text-right"
+                        />
                       </div>
                     </td>
                     <td className={`px-6 py-3 text-right font-medium ${
@@ -462,57 +634,18 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-muted-foreground mb-1">Épargne Libre du Mois</div>
-                {editingFreeSavings ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={editingFreeSavingsAmount}
-                      onChange={(e) => setEditingFreeSavingsAmount(e.target.value)}
-                      className="w-32 text-xl font-bold"
-                      step="0.01"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSaveFreeSavings}
-                      disabled={savingFreeSavings}
-                      className="h-8 w-8 p-0"
-                    >
-                      {savingFreeSavings ? (
-                        <div className="animate-spin h-3 w-3 border border-gray-300 rounded-full border-t-blue-600" />
-                      ) : (
-                        <Save className="h-3 w-3" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCancelFreeSavingsEdit}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-xl font-bold text-blue-600">
-                    {formatCurrency(freeSavings)}
-                  </div>
-                )}
+                <div className="text-xl font-bold text-blue-600">
+                  <InlineAmountEditor
+                    value={freeSavings}
+                    onSave={saveFreeSavingsInline}
+                    formatValue={(value) => formatCurrency(value)}
+                    className="text-xl font-bold text-blue-600"
+                  />
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Montant non affecté aux projets (éditable)
+                  Montant non affecté aux projets (cliquez pour éditer)
                 </div>
               </div>
-              {!editingFreeSavings && (
-                <div className="flex items-center gap-2 group">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleEditFreeSavings}
-                    className="h-8 w-8 p-0 opacity-60 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         </div>

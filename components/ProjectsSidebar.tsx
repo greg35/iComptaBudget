@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
@@ -47,10 +47,6 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             <Switch checked={showActiveOnly} onCheckedChange={(v) => onShowActiveOnlyChange(Boolean(v))} />
           </div>
         </div>
-        <Button size="sm" className="w-full mt-2" onClick={() => setIsCreateFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau projet
-        </Button>
       </SidebarHeader>
       <SidebarContent>
         {/* Navigation principale */}
@@ -63,6 +59,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <Home className="h-4 w-4" />
               <span>Accueil</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('projects-table')}
+              isActive={currentView === 'projects-table'}
+              className="w-full"
+            >
+              <TableProperties className="h-4 w-4" />
+              <span>Tableau des projets</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -89,6 +95,13 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
 
         <Separator className="mb-4" />
         <SidebarMenu>
+          <SidebarMenuItem>
+            <Button size="sm" className="w-full mt-2" onClick={() => setIsCreateFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau projet
+            </Button>
+          </SidebarMenuItem>
+
           {visible.map((project) => (
             <SidebarMenuItem key={project.id}>
               <SidebarMenuButton

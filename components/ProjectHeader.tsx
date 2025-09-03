@@ -13,9 +13,10 @@ interface ProjectHeaderProps {
   onDatesChange?: (projectId: string, dates: { startDate?: string | null, endDate?: string | null }) => void;
   onArchiveProject?: (projectId: string) => void;
   onDeleteProject?: (projectId: string) => void;
+  onNameChange?: (projectId: string, name: string) => void;
 }
 
-export function ProjectHeader({ project, onPlannedBudgetChange, onDatesChange, onArchiveProject, onDeleteProject }: ProjectHeaderProps) {
+export function ProjectHeader({ project, onPlannedBudgetChange, onDatesChange, onArchiveProject, onDeleteProject, onNameChange }: ProjectHeaderProps) {
   const safeNum = (v?: number | null) => Number(v ?? 0);
   const fmt = (v?: number | null) => new Intl.NumberFormat('fr-FR').format(safeNum(v));
   const planned = safeNum(project.plannedBudget);
@@ -39,7 +40,7 @@ export function ProjectHeader({ project, onPlannedBudgetChange, onDatesChange, o
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{project.name}</h1>
+              <NameEditor project={project} onChange={onNameChange} />
               {project.archived && (
                 <Badge variant="outline" className="text-xs">
                   Archivé
@@ -148,6 +149,89 @@ export function ProjectHeader({ project, onPlannedBudgetChange, onDatesChange, o
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+  );
+}
+
+function NameEditor({ project, onChange }: { project: Project, onChange?: (projectId: string, name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(project.name || "");
+  const inputRef = useRef(null as HTMLInputElement | null);
+
+  useEffect(() => {
+    setValue(project.name || "");
+  }, [project.name]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const save = async () => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return;
+    
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmedValue })
+      });
+      
+      if (!res.ok) throw new Error('failed');
+      
+      setEditing(false);
+      if (onChange) onChange(project.id, trimmedValue);
+    } catch (e) {
+      console.error('could not save project name', e);
+    }
+  };
+
+  const cancel = () => {
+    setValue(project.name || "");
+    setEditing(false);
+  };
+
+  const onKey = (e: any) => {
+    if (e.key === 'Enter') { save(); }
+    if (e.key === 'Escape') { cancel(); }
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">{project.name}</h1>
+        {onChange && (
+          <button 
+            className="text-muted-foreground hover:text-foreground transition-colors" 
+            title="Modifier le nom du projet" 
+            onClick={() => setEditing(true)}
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input 
+        ref={inputRef} 
+        className="text-2xl font-bold bg-transparent border-b-2 border-primary focus:outline-none focus:border-primary" 
+        value={value} 
+        onChange={e => setValue(e.target.value)} 
+        onKeyDown={onKey}
+        placeholder="Nom du projet"
+      />
+      <button title="Enregistrer" onClick={save} className="text-green-600 hover:text-green-700">
+        <Check className="h-4 w-4" />
+      </button>
+      <button title="Annuler" onClick={cancel} className="text-red-600 hover:text-red-700">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 

@@ -202,7 +202,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
           totalSavings = Number(totalResult[0].values[0][0]) || 0;
         }
       
-        // Calculate project breakdown from iCompta transactions (not from saved amounts)
+        // Calculate project breakdown from both iCompta transactions and manual allocations
         const projectBreakdown = {};
         
         // Create a mapping from project names to IDs
@@ -211,7 +211,42 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
           projectNameToId[project.name] = project.id;
         });
         
-        // Optimisation: Récupérer toutes les données des projets en une seule requête
+        // First, get manual allocations for this month
+        if (fs.existsSync(config.DATA_DB_PATH)) {
+          try {
+            const SQL = await initSqlJs();
+            const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
+            const budgetDb = new SQL.Database(filebuffer);
+            
+            const allocationsQuery = `
+              SELECT projectId, allocatedAmount
+              FROM project_allocations
+              WHERE month = ?
+                AND allocatedAmount > 0
+            `;
+            
+            const allocationsResult = budgetDb.exec(allocationsQuery, [monthKey]);
+            
+            // Process results from sql.js
+            if (allocationsResult && allocationsResult[0] && allocationsResult[0].values) {
+              for (const row of allocationsResult[0].values) {
+                const projectId = row[0];
+                const amount = Number(row[1]) || 0;
+                if (amount > 0) {
+                  projectBreakdown[projectId] = (projectBreakdown[projectId] || 0) + amount;
+                }
+              }
+            }
+            
+            budgetDb.close();
+            
+            console.log(`Month ${monthKey}: Found manual allocations for ${Object.keys(projectBreakdown).length} projects`);
+          } catch (e) {
+            console.error(`Error fetching manual allocations for month ${monthKey}:`, e && e.message);
+          }
+        }
+        
+        // Then, get iCompta transactions for this month (to avoid double counting, only if no manual allocations exist)
         if (projects.length > 0) {
           let allProjectsQuery;
           if (catIdVirements || catIdEpargne) {
@@ -255,10 +290,15 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
                   // Use project ID as key instead of project name
                   const projectId = projectNameToId[projectName];
                   if (projectId) {
-                    projectBreakdown[projectId] = projectSavings;
+                    // Only add iCompta data if no manual allocation exists for this project
+                    if (!projectBreakdown[projectId]) {
+                      projectBreakdown[projectId] = projectSavings;
+                    }
                   } else {
                     // Fallback to name if ID not found (for backward compatibility)
-                    projectBreakdown[projectName] = projectSavings;
+                    if (!projectBreakdown[projectName]) {
+                      projectBreakdown[projectName] = projectSavings;
+                    }
                   }
                 }
               }

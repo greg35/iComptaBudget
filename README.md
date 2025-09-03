@@ -129,7 +129,7 @@ J'utilise iCompta de la façon suivante :
 - **Hors budget** : Contient toutes les catégories qui ne sont pas de l'argent que je compte (virement interne, note de frais remboursées, avance/remboursement d'argent)
 
 Tous les mois je classifie mes dépenses à la fin du mois je fais Revenus - Needs - Wants -> cela donne le montant que j'ai épargné dans le mois. 
-Ce montant je vais le virer sur un compte d'épargne type livret et je vais ensuite splité le crédit sur le compte d'épargne en autant d'opération que d'affectation à des projets. Je mets la catégorie Hors budget > Virement d'épargne et je renseigne le projet. 
+Ce montant je vais le virer sur un compte d'épargne type livret et je vais ensuite splité le crédit sur le compte d'épargne en autant d'opération que d'affectation à des projets. Je mets la catégorie Hors budget > Virements d'épargne et je renseigne le projet. 
 
 ![alt text](https://github.com/greg35/iComptaBudget/blob/main/screenshot/TransactionEpargne.png?raw=true)
 

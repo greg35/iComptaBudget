@@ -23,9 +23,9 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
         <Table className="w-full table-fixed">
           {/* Force column widths so changes are effective across browsers */}
           <colgroup>
-            <col style={{ width: '4rem' }} />
-            <col style={{ width: '30rem' }} />
-            <col style={{ width: '12rem' }} />
+            <col style={{ width: '6rem' }} />
+            <col style={{ width: '28rem' }} />
+            <col style={{ width: '14rem' }} />
             <col style={{ width: '10rem' }} />
             <col style={{ width: '6rem' }} />
             <col style={{ width: '8rem' }} />

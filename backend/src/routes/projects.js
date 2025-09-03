@@ -277,7 +277,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const projectId = req.params.id;
-    const { archived, plannedBudget, startDate, endDate } = req.body;
+    const { archived, plannedBudget, startDate, endDate, name } = req.body;
 
     if (!fs.existsSync(config.DATA_DB_PATH)) return res.status(500).json({ error: 'data DB missing' });
     const buf = fs.readFileSync(config.DATA_DB_PATH);
@@ -299,6 +299,10 @@ router.patch('/:id', async (req, res) => {
     if (endDate !== undefined) {
       const escaped = (endDate || '').replace(/'/g, "''");
       updates.push(`endDate = '${escaped}'`);
+    }
+    if (name !== undefined) {
+      const escaped = (name || '').replace(/'/g, "''");
+      updates.push(`name = '${escaped}'`);
     }
 
     if (updates.length === 0) {

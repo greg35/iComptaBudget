@@ -298,6 +298,30 @@ async function migrateDataDb() {
     } catch (e) {
       console.error('Failed running migration 003-project-saving-goals:', e && e.message);
     }
+
+    // Exécuter migration pour les montants d'épargne mensuels manuels
+    try {
+      const { createMonthlyManualSavingsTable } = require('../migrations/002-create-monthly-manual-savings');
+      await createMonthlyManualSavingsTable();
+    } catch (e) {
+      console.error('Failed running migration 002-create-monthly-manual-savings:', e && e.message);
+    }
+
+    // Exécuter migration pour la table transactions
+    try {
+      const { createTransactionsTable } = require('../migrations/004-create-transactions');
+      await createTransactionsTable();
+    } catch (e) {
+      console.error('Failed running migration 004-create-transactions:', e && e.message);
+    }
+
+    // Exécuter migration pour la table project_allocations
+    try {
+      const { createProjectAllocationTable } = require('../migrations/005-create-project-allocations');
+      await createProjectAllocationTable();
+    } catch (e) {
+      console.error('Failed running migration 005-create-project-allocations:', e && e.message);
+    }
   } catch (e) {
     console.error('Database migration failed:', e && e.message);
   }

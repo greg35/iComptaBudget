@@ -9,6 +9,7 @@ export interface Project {
   dbProject?: string | null;
   archived?: boolean;
   savingGoals?: ProjectSavingGoal[]; // optionnel: historique des objectifs
+  monthlySavingsTarget?: number; // montant d'épargne cible pour le mois le plus récent
 }
 
 // Objectif mensuel historisé pour un projet
@@ -71,4 +72,21 @@ export interface SavingsAccount {
   type: 'livret' | 'compte_courant' | 'pel' | 'autre';
 }
 
-export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown';
+export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table';
+
+export interface MonthlyManualSavings {
+  month: string; // YYYY-MM
+  amount: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProjectAllocation {
+  id: string;
+  month: string; // YYYY-MM
+  projectId: string;
+  projectName?: string;
+  allocatedAmount: number;
+  createdAt?: string;
+  updatedAt?: string;
+}

@@ -13,6 +13,7 @@ import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
+import { ProjectsTableView } from "./components/ProjectsTableView";
 import { toast } from "sonner";
 import { updateAccounts } from "./utils/accountsApi";
 
@@ -66,25 +67,117 @@ export default function App() {
       const res = await fetch('/api/projects');
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data = await res.json();
-      // normalize values to ensure numbers (avoid toLocaleString on null/strings)
-      const normalized = (data || []).map((p: any) => ({
-        id: String(p.id ?? p.name ?? ''),
-        name: p.name ?? String(p.id ?? ''),
-        startDate: p.startDate ?? '',
-        endDate: p.endDate ?? '',
-        plannedBudget: Number(p.plannedBudget ?? 0) || 0,
-        currentSavings: Number(p.currentSavings ?? 0) || 0,
-        currentSpent: Number(p.currentSpent ?? 0) || 0,
-        archived: Boolean(p.archived), // Include archived property from database
-        // preserve the original DB project key (string stored in ICTransactionSplit.project)
-        dbProject: p.dbProject ?? null,
-      } as any));
-      setProjects(normalized);
-      if (!selectedProjectId && normalized && normalized.length > 0) setSelectedProjectId(String(normalized[0].id));
+      
+      // Charger les objectifs d'épargne et les allocations pour tous les projets
+      const projectsWithTargets = await Promise.all((data || []).map(async (p: any) => {
+        const normalized: Project = {
+          id: String(p.id ?? p.name ?? ''),
+          name: p.name ?? String(p.id ?? ''),
+          startDate: p.startDate ?? '',
+          endDate: p.endDate ?? '',
+          plannedBudget: Number(p.plannedBudget ?? 0) || 0,
+          currentSavings: Number(p.currentSavings ?? 0) || 0, // This is only iCompta transactions
+          currentSpent: Number(p.currentSpent ?? 0) || 0,
+          archived: Boolean(p.archived),
+          dbProject: p.dbProject ?? null,
+        };
+
+        // Récupérer l'objectif d'épargne mensuel le plus récent
+        try {
+          const goalsRes = await fetch(`/api/saving-goals/project/${normalized.id}`);
+          if (goalsRes.ok) {
+            const goals = await goalsRes.json();
+            // Trouver l'objectif actif (celui sans endDate ou avec la endDate la plus récente)
+            const activeGoal = goals
+              .filter((goal: any) => !goal.endDate || new Date(goal.endDate) >= new Date())
+              .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+            
+            if (activeGoal) {
+              normalized.monthlySavingsTarget = Number(activeGoal.amount) || 0;
+            }
+          }
+        } catch (e) {
+          // Si on ne peut pas charger les objectifs, on continue sans
+          console.warn(`Could not load saving goals for project ${normalized.id}:`, e);
+        }
+
+        // Ajouter les allocations manuelles au currentSavings
+        try {
+          // Récupérer seulement les transactions d'allocation manuelle (créées par notre système)
+          const transactionsRes = await fetch(`/api/transactions?project=${normalized.id}`);
+          if (transactionsRes.ok) {
+            const transactions = await transactionsRes.json();
+            // Filtrer uniquement les transactions d'allocation créées par notre système
+            // (description commence par "VIR Epargne" ET isManual = true)
+            const manualAllocations = transactions
+              .filter((t: any) => 
+                t.type === 'income' && 
+                t.category === "Virements d'épargne" &&
+                t.description && t.description.startsWith('VIR Epargne') &&
+                t.isManual === true // Exclure les vraies transactions iCompta déjà comptées
+              )
+              .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
+            
+            // Ajouter les allocations manuelles au currentSavings des transactions iCompta
+            normalized.currentSavings += manualAllocations;
+          }
+        } catch (e) {
+          console.warn(`Could not load manual allocations for project ${normalized.id}:`, e);
+        }
+
+        return normalized;
+      }));
+
+      setProjects(projectsWithTargets);
+      if (!selectedProjectId && projectsWithTargets && projectsWithTargets.length > 0) {
+        setSelectedProjectId(String(projectsWithTargets[0].id));
+      }
     } catch (e) {
       console.error('Could not load projects:', e);
     } finally {
       setLoadingProjects(false);
+    }
+  };
+
+  // Fonction pour recharger currentSavings d'un projet après une allocation
+  const refreshProjectSavings = async (projectId: string) => {
+    try {
+      // Récupérer les données du projet depuis l'API
+      const res = await fetch('/api/projects');
+      if (!res.ok) return;
+      const data = await res.json();
+      const projectData = data.find((p: any) => String(p.id) === projectId);
+      if (!projectData) return;
+
+      // Calculer currentSavings avec allocations manuelles
+      let currentSavings = Number(projectData.currentSavings ?? 0) || 0;
+      
+      try {
+        const transactionsRes = await fetch(`/api/transactions?project=${projectId}`);
+        if (transactionsRes.ok) {
+          const transactions = await transactionsRes.json();
+          // Filtrer uniquement les transactions d'allocation créées par notre système
+          // (description commence par "VIR Epargne" ET isManual = true)
+          const manualAllocations = transactions
+            .filter((t: any) => 
+              t.type === 'income' && 
+              t.category === "Virements d'épargne" &&
+              t.description && t.description.startsWith('VIR Epargne') &&
+              t.isManual === true // Exclure les vraies transactions iCompta déjà comptées
+            )
+            .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
+          currentSavings += manualAllocations;
+        }
+      } catch (e) {
+        console.warn(`Could not load manual allocations for project ${projectId}:`, e);
+      }
+
+      // Mettre à jour le projet dans l'état local
+      setProjects(prev => prev.map(p => 
+        p.id === projectId ? { ...p, currentSavings } : p
+      ));
+    } catch (e) {
+      console.error('Could not refresh project savings:', e);
     }
   };
 
@@ -166,7 +259,8 @@ export default function App() {
   const currentProject = projects.find(p => p.id === selectedProjectId);
   // Use the DB project key (dbProject) when available — this matches ICTransactionSplit.project values
   // Fallback to the project id when dbProject is not set.
-  const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
+  //const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
+  const projectKey = selectedProjectId;
     (async () => {
       try {
         const res = await fetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
@@ -184,12 +278,11 @@ export default function App() {
           description: t.description || '',
           comment: t.comment || '',
           amount: Number(t.amount || 0),
-          // determine type based on category: only 'Virements d'épargne' is considered savings
-          type: ((t.category || '') === 'Virements d\'épargne' || (t.category || '') === "Virements d'épargne") ? 'income' : 'expense',
+          // Use original type if available (for manual transactions), otherwise determine from category
+          type: t.type || (((t.category || '') === 'Virements d\'épargne' || (t.category || '') === "Virements d'épargne") ? 'income' : 'expense'),
           category: t.category || ''
         }));
-        setProjectTransactions(filtered);
-        console.debug('loaded projectTransactions for', projectKey, 'count', filtered.length);
+        setProjectTransactions(filtered);        
       } catch (e: any) {
         console.error('could not load project transactions', e);
         setProjectTransactions([]);
@@ -423,6 +516,49 @@ export default function App() {
       setIsUpdatingAccounts(false);
     }
   };
+  const handleUpdateProject = async (
+    projectId: string,
+    updates: Partial<Project>,
+  ) => {
+    // Mettre à jour l'état local immédiatement
+    setProjects((prev) =>
+      prev.map((project) =>
+        project.id === projectId
+          ? { ...project, ...updates }
+          : project,
+      ),
+    );
+
+    // Si monthlySavingsTarget est modifié, sauvegarder comme objectif d'épargne
+    if ('monthlySavingsTarget' in updates && updates.monthlySavingsTarget !== undefined) {
+      try {
+        const currentDate = new Date();
+        const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+        
+        const response = await fetch('/api/saving-goals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            projectId,
+            amount: updates.monthlySavingsTarget,
+            startDate: currentMonth,
+            reason: 'Modification manuelle depuis le tableau des projets',
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de la sauvegarde de l\'objectif d\'épargne');
+        }
+
+        console.log('Objectif d\'épargne mensuel sauvegardé:', updates.monthlySavingsTarget);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de l\'objectif d\'épargne:', error);
+        // Note: On garde la mise à jour locale même en cas d'erreur de sauvegarde
+      }
+    }
+  };
 
   const handleFirstStartupComplete = () => {
     setIsFirstStartup(false);
@@ -489,7 +625,14 @@ export default function App() {
               projects={projects}
               showActiveOnly={showActiveOnly}
             />
-          ) : selectedProject ? (
+          ) : currentView === "projects-table" ? (
+            <ProjectsTableView
+              projects={projects}
+              onUpdateProject={handleUpdateProject}
+              onProjectSelect={handleProjectSelect}
+              onViewChange={handleViewChange}
+            />
+          ): selectedProject ? (
             <>
               <ProjectHeader 
                 project={selectedProject} 
@@ -499,6 +642,9 @@ export default function App() {
                 onDatesChange={handleDatesChange} 
                 onArchiveProject={handleArchiveProject}
                 onDeleteProject={handleDeleteProject}
+                onNameChange={(projId, name) => {
+                  setProjects(prev => prev.map(p => p.id === projId ? Object.assign({}, p, { name }) : p));
+                }}
               />
               <ProjectSavingGoalsPanel projectId={selectedProject.id} />
               <BudgetChart data={chartData} projectName={selectedProject.name} />

@@ -235,6 +235,60 @@ router.get('/project/:projectId/suggest', (req, res) => {
   buildSuggestion(req, res);
 });
 
+// Création ou mise à jour d'un objectif d'épargne
+router.post('/', async (req, res) => {
+  try {
+    const { projectId, amount, startDate, reason } = req.body;
+    
+    if (!projectId || amount === undefined || !startDate) {
+      return res.status(400).json({ error: 'projectId, amount and startDate are required' });
+    }
+    
+    if (!fs.existsSync(config.DATA_DB_PATH)) {
+      return res.status(500).json({ error: 'Data database not found' });
+    }
+    
+    const SQL = await initSqlJs();
+    const buf = fs.readFileSync(config.DATA_DB_PATH);
+    const db = new SQL.Database(buf);
+    
+    // Fermer l'objectif actuel (s'il existe) avant d'en créer un nouveau
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+    const prevLastDay = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-${String(prevMonth.getDate()).padStart(2, '0')}`;
+    
+    // Fermer les objectifs existants qui n'ont pas de date de fin
+    db.run(`UPDATE project_saving_goals SET end_date='${prevLastDay}' 
+            WHERE project_id=${parseInt(projectId)} AND end_date IS NULL`);
+    
+    // Créer le nouvel objectif
+    const reasonText = reason || 'Modification manuelle';
+    db.run(`INSERT INTO project_saving_goals (project_id, amount, start_date, reason)
+            VALUES (${parseInt(projectId)}, ${parseFloat(amount)}, '${startDate}', '${reasonText.replace(/'/g,"''")}')`);
+    
+    const idRes = db.exec('SELECT last_insert_rowid()');
+    const newId = idRes && idRes[0] && idRes[0].values[0] ? idRes[0].values[0][0] : null;
+    
+    // Sauvegarder les changements
+    const data = db.export();
+    fs.writeFileSync(config.DATA_DB_PATH, Buffer.from(data));
+    db.close();
+    
+    res.json({
+      success: true,
+      id: String(newId),
+      projectId: String(projectId),
+      amount: parseFloat(amount),
+      startDate,
+      reason: reasonText
+    });
+  } catch (e) {
+    console.error('Failed to create saving goal', e && e.message);
+    res.status(500).json({ error: 'failed to create saving goal' });
+  }
+});
+
 // Acceptation d'une suggestion -> clôture objectif courant + insertion nouveau
 router.post('/project/:projectId/accept', async (req, res) => {
   try {
