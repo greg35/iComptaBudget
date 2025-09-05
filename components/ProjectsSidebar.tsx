@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
@@ -89,6 +89,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <Calendar className="h-4 w-4" />
               <span>Épargne par Mois</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('projection-epargne')}
+              isActive={currentView === 'projection-epargne'}
+              className="w-full"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Projection Épargne</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -10,6 +10,7 @@ import { GlobalSavingsFooter } from "./components/GlobalSavingsFooter";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
 import { MonthBreakdownView } from "./components/MonthBreakdownView";
+import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -600,6 +601,11 @@ export default function App() {
             />
           ) : currentView === "month-breakdown" ? (
             <MonthBreakdownView
+              projects={projects}
+              showActiveOnly={showActiveOnly}
+            />
+          ) : currentView === "projection-epargne" ? (
+            <GoalSavingsProjectionView
               projects={projects}
               showActiveOnly={showActiveOnly}
             />

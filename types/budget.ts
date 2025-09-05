@@ -72,7 +72,7 @@ export interface SavingsAccount {
   type: 'livret' | 'compte_courant' | 'pel' | 'autre';
 }
 
-export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table';
+export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table' | 'projection-epargne';
 
 export interface MonthlyManualSavings {
   month: string; // YYYY-MM

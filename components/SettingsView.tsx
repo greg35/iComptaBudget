@@ -147,6 +147,25 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     }
   };
 
+  // Fonctions pour sélectionner/désélectionner tous les comptes
+  const toggleAllSavings = (checked: boolean) => {
+    setAccountPreferences(prev => 
+      prev.map(pref => ({ ...pref, includeSavings: checked }))
+    );
+  };
+
+  const toggleAllChecking = (checked: boolean) => {
+    setAccountPreferences(prev => 
+      prev.map(pref => ({ ...pref, includeChecking: checked }))
+    );
+  };
+
+  // Calculer l'état des cases à cocher globales
+  const allSavingsChecked = accountPreferences.length > 0 && accountPreferences.every(pref => pref.includeSavings);
+  const allCheckingChecked = accountPreferences.length > 0 && accountPreferences.every(pref => pref.includeChecking);
+  const someSavingsChecked = accountPreferences.some(pref => pref.includeSavings);
+  const someCheckingChecked = accountPreferences.some(pref => pref.includeChecking);
+
   const handleSave = async () => {
     setIsLoading(true);
     try {
@@ -453,8 +472,30 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                   <thead className="bg-muted/50 border-b">
                     <tr>
                       <th className="text-left p-3 font-medium text-sm">Nom du compte</th>
-                      <th className="text-center p-3 font-medium text-sm border-l w-32">Inclure dans l'épargne</th>
-                      <th className="text-center p-3 font-medium text-sm border-l w-32">Inclure dans les dépenses</th>
+                      <th className="text-center p-3 font-medium text-sm border-l w-32">
+                        <div className="flex flex-col items-center gap-1">
+                          <span>Inclure dans l'épargne</span>
+                          <Checkbox
+                            id="toggle-all-savings"
+                            checked={allSavingsChecked}
+                            onCheckedChange={(checked) => toggleAllSavings(!!checked)}
+                            className="h-3 w-3"
+                            title={allSavingsChecked ? "Désélectionner tout" : "Sélectionner tout"}
+                          />
+                        </div>
+                      </th>
+                      <th className="text-center p-3 font-medium text-sm border-l w-32">
+                        <div className="flex flex-col items-center gap-1">
+                          <span>Inclure dans les dépenses</span>
+                          <Checkbox
+                            id="toggle-all-checking"
+                            checked={allCheckingChecked}
+                            onCheckedChange={(checked) => toggleAllChecking(!!checked)}
+                            className="h-3 w-3"
+                            title={allCheckingChecked ? "Désélectionner tout" : "Sélectionner tout"}
+                          />
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   

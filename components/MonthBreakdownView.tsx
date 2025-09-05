@@ -182,31 +182,6 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     setSelectedYear(newYear);
   };
 
-  // Fonction pour sauvegarder l'épargne libre avec le nouveau composant
-  const saveFreeSavingsInline = async (amount: number) => {
-    try {
-  const response = await apiFetch('/api/monthly-manual-savings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          month: monthKey,
-          amount: amount,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la sauvegarde de l\'épargne libre');
-      }
-
-      setFreeSavings(amount);
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de l\'épargne libre:', error);
-      throw error; // Re-lancer l'erreur pour que le composant inline la gère
-    }
-  };
-
   // Fonctions pour gérer les allocations par projet
   const getAllocationKey = (projectId: string, month: string) => `${projectId}-${month}`;
 
@@ -629,26 +604,6 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
               Aucun projet trouvé pour les critères sélectionnés
             </div>
           )}
-
-          {/* Bloc Épargne Libre */}
-          <div className="bg-card rounded-lg p-6 border">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Épargne Libre du Mois</div>
-                <div className="text-xl font-bold text-blue-600">
-                  <InlineAmountEditor
-                    value={freeSavings}
-                    onSave={saveFreeSavingsInline}
-                    formatValue={(value) => formatCurrency(value)}
-                    className="text-xl font-bold text-blue-600"
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Montant non affecté aux projets (cliquez pour éditer)
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
