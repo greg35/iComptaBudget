@@ -4,8 +4,7 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
-
-## [1.4.7] - 2025-09-05
+## [1.4.8] - 2025-09-05
 
 ### Ajouté
 - Bouton "+ de détail" dans le panneau des objectifs d'épargne pour afficher/masquer les informations secondaires
@@ -16,7 +15,12 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ### Corrigé
 - Amélioration mineure de l'ergonomie (réduction du scroll vertical inutile)
 
-## [1.4.6] - 2025-09-04
+## [1.4.7] - 2025-09-03
+
+### Corrigé
+- Bug Fixing & improvment
+
+## [1.4.6] - 2025-09-03
 
 ### Modifié
 - Footer global d'épargne repositionné (largeur calculée sans la sidebar)
@@ -25,7 +29,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ### Corrigé
 - Problème d'affichage du footer recouvrant le contenu principal
 
-## [1.4.5] - 2025-09-04
+## [1.4.5] - 2025-09-03
 
 ### Ajouté
 - Footer global présentant : épargne totale, épargne projets, épargne libre
@@ -52,7 +56,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ### Corrigé
 - Décalage entre le remainingBudget suggéré et les montants réellement épargnés manuellement
 
-## [1.4.2]
+## [1.4.2] - 2025-09-03
 
 ### Ajouté
 - Création automatique de releases GitHub avec notes générées
@@ -63,7 +67,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Script de release amélioré avec support GitHub CLI
 - Prérequis pour les releases GitHub documentés
 
-## [1.4.1] - 2025-09-02
+## [1.4.1] - 2025-09-03
 
 ### Corrigé
 - Correction du calcul de `projectBreakdown` dans l'API monthly-savings
@@ -74,7 +78,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Utilisation correcte de sql.js pour les requêtes d'allocations
 - Évitement du double comptage entre données iCompta et allocations manuelles
 
-## [1.4.0] - 2025-09-02
+## [1.4.0] - 2025-09-03
 
 ### Ajouté
 - Édition inline des noms de projets avec composant NameEditor
