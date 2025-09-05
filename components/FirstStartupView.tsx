@@ -25,7 +25,7 @@ export function FirstStartupView({ onComplete }: FirstStartupViewProps) {
 
     setIsConfiguring(true);
     try {
-      const response = await fetch('http://127.0.0.1:2113/api/settings', {
+  const response = await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

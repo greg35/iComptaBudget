@@ -71,7 +71,7 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
     setLoading(true);
     try {
       // Appel à l'API pour récupérer les données réelles
-      const response = await fetch(`http://127.0.0.1:2113/api/monthly-savings?months=${monthsToShow}`);
+  const response = await fetch(`/api/monthly-savings?months=${monthsToShow}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

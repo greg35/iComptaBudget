@@ -217,7 +217,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   // Fonction pour sauvegarder une allocation avec le nouveau composant
   const saveAllocationInline = async (projectId: string, amount: number) => {
     try {
-      const response = await fetch(`http://127.0.0.1:2113/api/project-allocations/${monthKey}`, {
+  const response = await fetch(`/api/project-allocations/${monthKey}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -251,7 +251,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   // Fonction pour charger les allocations existantes
   const loadAllocations = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:2113/api/project-allocations/${monthKey}`);
+  const response = await fetch(`/api/project-allocations/${monthKey}`);
       if (response.ok) {
         const allocationsArray = await response.json();
         const allocationsMap: { [key: string]: ProjectAllocation } = {};
@@ -281,7 +281,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
       try {
         console.log('Fetching monthly savings for monthKey:', monthKey);
         // Ne récupérer que le mois demandé pour optimiser la performance
-        const monthlyResponse = await fetch(`http://127.0.0.1:2113/api/monthly-savings?months=1&targetMonth=${monthKey}`);
+  const monthlyResponse = await fetch(`/api/monthly-savings?months=1&targetMonth=${monthKey}`);
         if (monthlyResponse.ok) {
           const monthlyData = await monthlyResponse.json();
           console.log('Monthly savings data received:', monthlyData);

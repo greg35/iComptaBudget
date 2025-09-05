@@ -34,7 +34,7 @@ export function ProjectsTableView({ projects, onUpdateProject, onProjectSelect, 
       try {
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const response = await fetch(`http://127.0.0.1:2113/api/project-allocations/${currentMonth}`);
+  const response = await fetch(`/api/project-allocations/${currentMonth}`);
         
         if (response.ok) {
           const allocations = await response.json();

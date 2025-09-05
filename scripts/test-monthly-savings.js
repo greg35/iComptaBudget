@@ -26,7 +26,8 @@ async function testMonthlySavingsCalculation() {
   try {
     // 1. Tester l'API des préférences de comptes
     console.log('1️⃣ Vérification des préférences de comptes...');
-    const prefs = await curlApi('http://127.0.0.1:2113/api/account-preferences');
+  const base = process.env.BASE_URL || 'http://127.0.0.1:2113';
+  const prefs = await curlApi(`${base}/api/account-preferences`);
     if (prefs) {
       console.log(`✅ ${prefs.length} préférences de comptes trouvées`);
       
@@ -41,7 +42,7 @@ async function testMonthlySavingsCalculation() {
     
     // 2. Tester l'API d'épargne mensuelle
     console.log('\n2️⃣ Test du calcul d\'épargne mensuelle...');
-    const savingsData = await curlApi('http://127.0.0.1:2113/api/monthly-savings?months=3');
+  const savingsData = await curlApi(`${base}/api/monthly-savings?months=3`);
     if (savingsData && !savingsData.error) {
       console.log(`✅ Données d'épargne calculées pour ${savingsData.length} mois`);
       
@@ -71,7 +72,7 @@ async function testMonthlySavingsCalculation() {
     
     // 3. Tester l'API des comptes avec filtrage
     console.log('\n3️⃣ Test des comptes filtrés pour les dépenses...');
-    const accounts = await curlApi('http://127.0.0.1:2113/api/accounts?filterType=checking');
+  const accounts = await curlApi(`${base}/api/accounts?filterType=checking`);
     if (accounts && !accounts.error) {
       console.log(`✅ ${accounts.length} comptes inclus dans les calculs de dépenses:`);
       accounts.forEach(acc => {

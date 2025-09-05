@@ -184,7 +184,7 @@ export default function App() {
     
     (async () => {
       try {
-        const res = await fetch('http://127.0.0.1:2113/api/settings');
+  const res = await fetch('/api/settings');
         if (!res.ok) throw new Error('failed to fetch settings');
         const data = await res.json();
         if (!mounted) return;
@@ -397,7 +397,7 @@ export default function App() {
     
     try {
       // Call backend to update archived state
-      const response = await fetch(`http://127.0.0.1:2113/api/projects/${projectId}`, {
+  const response = await fetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -444,7 +444,7 @@ export default function App() {
 
     try {
       // Call backend to delete project
-      const response = await fetch(`http://127.0.0.1:2113/api/projects/${projectId}`, {
+  const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

@@ -43,7 +43,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const loadAccountPreferences = async () => {
     setIsLoadingPreferences(true);
     try {
-      const response = await fetch('http://127.0.0.1:2113/api/account-preferences');
+  const response = await fetch('/api/account-preferences');
       if (response.ok) {
         const preferences = await response.json();
         setAccountPreferences(preferences);
@@ -59,7 +59,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const refreshAccountList = async () => {
     setIsRefreshingAccounts(true);
     try {
-      const response = await fetch('http://127.0.0.1:2113/api/account-preferences/refresh', {
+  const response = await fetch('/api/account-preferences/refresh', {
         method: 'POST',
       });
       
@@ -85,7 +85,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
 
       const updatedPref = { ...currentPref, [field]: value };
 
-      const response = await fetch('http://127.0.0.1:2113/api/account-preferences', {
+  const response = await fetch('/api/account-preferences', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const saveAllPreferences = async () => {
     setIsSavingPreferences(true);
     try {
-      const response = await fetch('http://127.0.0.1:2113/api/account-preferences/save-all', {
+  const response = await fetch('/api/account-preferences/save-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     setIsLoading(true);
     try {
       // Sauvegarder dans la base de données via l'API
-      const response = await fetch('http://127.0.0.1:2113/api/settings', {
+  const response = await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
