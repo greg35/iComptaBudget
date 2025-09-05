@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
       }
     }
     
-    const db = await openDb();
+    const db = await openDb(config.DB_PATH);
     try {
 
         // attempt join with ICAccountFolder and compute balance by summing splits for the account

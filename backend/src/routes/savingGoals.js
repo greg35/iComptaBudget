@@ -182,6 +182,30 @@ async function buildSuggestion(req, res) {
     const totalMonths = ((parseInt(endMonth.slice(0,4))*12+parseInt(endMonth.slice(5,7))) - (parseInt(startMonth.slice(0,4))*12+parseInt(startMonth.slice(5,7)))) + 1;
     const currentMonthIndex = ((parseInt(todayMonth.slice(0,4))*12+parseInt(todayMonth.slice(5,7))) - (parseInt(startMonth.slice(0,4))*12+parseInt(startMonth.slice(5,7)))) + 1;
     const remainingMonths = Math.max(0, totalMonths - currentMonthIndex + 1);
+    
+    // Intégrer l'épargne manuelle locale (transactions créées par l'application)
+    // On additionne seulement les entrées (type='income') qui correspondent à nos allocations manuelles
+    // Critères : description commençant par 'VIR Epargne' OU catégorie contenant 'épargne'
+    let manualSaved = 0;
+    try {
+      const manualQ = `SELECT SUM(CAST(amount AS REAL)) as s
+        FROM transactions 
+        WHERE type='income'
+          AND (projectId = ${parseInt(projectId)} OR projectId = '' OR projectId IS NULL)
+          AND (
+            description LIKE 'VIR Epargne%'
+            OR lower(category) LIKE '%épargne%'
+            OR lower(category) LIKE '%epargne%'
+          )`;
+      const manualRes = dataDb.exec(manualQ);
+      if (manualRes && manualRes[0] && manualRes[0].values[0] && manualRes[0].values[0][0] != null) {
+        manualSaved = Number(manualRes[0].values[0][0]) || 0;
+      }
+    } catch (e2) {
+      console.warn('Failed summing manual allocations for suggestion', e2 && e2.message);
+    }
+    // Ajouter au montant épargné (évite double comptage car non présent dans la DB principale)
+    saved += manualSaved;
   // Reste à épargner = budget prévu - déjà épargné (plafonné à 0 mini)
   if (saved >= plannedBudget - 0.01) saved = plannedBudget; // clamp en cas de dépassement léger
   const remainingBudget = Math.max(0, plannedBudget - saved);
@@ -214,6 +238,7 @@ async function buildSuggestion(req, res) {
       remainingMonths,
       totalMonths,
       savedToDate: saved,
+  manualSaved,
       expectedSavedBaseline,
       performanceGap,
       status

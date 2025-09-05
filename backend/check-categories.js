@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+const config = require('./config');
 const { openDb } = require('./src/utils/database.js');
 
 async function checkCategories() {
@@ -7,7 +7,7 @@ async function checkCategories() {
     
     try {
         // Ouvrir la base de données principale
-        const db = await openDb();
+        const db = await openDb(config.DB_PATH);
         
         // Rechercher la catégorie "Hors Budget"
         console.log('1️⃣ Recherche de catégories contenant "Hors" ou "Budget"...');

@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ error: 'Data database missing' });
     }
 
-    const mainDb = await openDb();
+    const mainDb = await openDb(config.DB_PATH);
     const SQL = await initSqlJs();
     
     try {

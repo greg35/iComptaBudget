@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+const config = require('./config');
 const { openDb } = require('./src/utils/database.js');
 
 async function checkCategoryStructure() {
@@ -7,7 +7,7 @@ async function checkCategoryStructure() {
     
     try {
         // Ouvrir la base de données principale
-        const db = await openDb();
+        const db = await openDb(config.DB_PATH);
         
         // Vérifier la structure de la table ICCategory
         console.log('1️⃣ Structure de la table ICCategory...');

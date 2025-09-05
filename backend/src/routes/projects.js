@@ -63,6 +63,25 @@ function computeCurrentSavingsSql(db, projectKey, categoryIds) {
   }
 }
 
+function computeCurrentSavingsDataSql(db, projectId) {
+  try {
+    console.log('Récup transactions manuelles pour projet:', projectId);
+
+    let q;
+    q = "SELECT SUM(CAST(t.amount AS REAL)) as s FROM transactions t " +
+        "WHERE t.projectId = '" + projectId + "'";
+
+    const res = db.exec(q);
+    if (res && res[0] && res[0].values && res[0].values[0] && res[0].values[0][0] !== null) {
+      return Number(res[0].values[0][0]) || 0;
+    }
+    return 0;
+  } catch (e) {
+    console.error('Error computing current savings:', e && e.message);
+    return 0;
+  }
+}
+
 function computeCurrentSpentSql(db, projectKey, excludeCategoryIds) {
   try {
     const escProject = String(projectKey).replace(/'/g, "''");
@@ -139,7 +158,8 @@ router.get('/', async (req, res) => {
     return res.json(out);
   }
   
-  const db = await openDb();
+  const db = await openDb(config.DB_PATH);
+  const datadb = await openDb(config.DATA_DB_PATH);
   try {
     const doAutoMap = (req.query.autoMap === 'true');
     const splits = doAutoMap ? getDistinctSplitProjects(db) : null;
@@ -156,7 +176,7 @@ router.get('/', async (req, res) => {
             projectKey = candidates[0].project;
           }
         }
-    const currentSavings = computeCurrentSavingsSql(db, projectKey, [catIdVirements, catIdEpargne]) || 0;
+        const currentSavings = computeCurrentSavingsSql(db, projectKey, [catIdVirements, catIdEpargne]) + computeCurrentSavingsDataSql(datadb, p.id);
         const currentSpent = computeCurrentSpentSql(db, projectKey, [catIdVirements, catIdEpargne, catIdVirementsInternes]) || 0;
         return Object.assign({}, p, { currentSavings, currentSpent });
       });

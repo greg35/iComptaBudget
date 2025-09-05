@@ -92,7 +92,7 @@ router.post('/refresh', async (req, res) => {
       return res.status(400).json({ error: 'Main database not found' });
     }
 
-    const mainDb = await openDb();
+    const mainDb = await openDb(config.DB_PATH);
     const accounts = [];
     
     try {

@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
       }
     }
     
-    const db = await openDb();
+    const db = await openDb(config.DB_PATH);
     try {
     const q = `SELECT s.ID as splitId, s.amount as amount, s.project as project, COALESCE(t.date, t.valueDate, '') as txDate, t.name as txName, c1.name as splitCategoryName, s.comment as splitComment
         FROM ICTransactionSplit s

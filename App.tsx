@@ -6,6 +6,7 @@ import { ProjectSavingGoalsPanel } from "./components/ProjectSavingGoalsPanel";
 import { BudgetChart } from "./components/BudgetChart";
 import { TransactionsList } from "./components/TransactionsList";
 import { HomeView } from "./components/HomeView";
+import { GlobalSavingsFooter } from "./components/GlobalSavingsFooter";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
 import { MonthBreakdownView } from "./components/MonthBreakdownView";
@@ -99,30 +100,6 @@ export default function App() {
         } catch (e) {
           // Si on ne peut pas charger les objectifs, on continue sans
           console.warn(`Could not load saving goals for project ${normalized.id}:`, e);
-        }
-
-        // Ajouter les allocations manuelles au currentSavings
-        try {
-          // Récupérer seulement les transactions d'allocation manuelle (créées par notre système)
-          const transactionsRes = await fetch(`/api/transactions?project=${normalized.id}`);
-          if (transactionsRes.ok) {
-            const transactions = await transactionsRes.json();
-            // Filtrer uniquement les transactions d'allocation créées par notre système
-            // (description commence par "VIR Epargne" ET isManual = true)
-            const manualAllocations = transactions
-              .filter((t: any) => 
-                t.type === 'income' && 
-                t.category === "Virements d'épargne" &&
-                t.description && t.description.startsWith('VIR Epargne') &&
-                t.isManual === true // Exclure les vraies transactions iCompta déjà comptées
-              )
-              .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
-            
-            // Ajouter les allocations manuelles au currentSavings des transactions iCompta
-            normalized.currentSavings += manualAllocations;
-          }
-        } catch (e) {
-          console.warn(`Could not load manual allocations for project ${normalized.id}:`, e);
         }
 
         return normalized;
@@ -604,7 +581,7 @@ export default function App() {
           isUpdatingAccounts={isUpdatingAccounts}
         />
         
-        <main className="flex-1 p-6 space-y-6">
+  <main className={`flex-1 p-6 space-y-6 flex flex-col ${ (currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown') ? 'pb-28' : '' }`}>
           {currentView === "home" ? (
             <HomeView
               projects={projects}
@@ -657,6 +634,9 @@ export default function App() {
           )}
         </main>
       </div>
+      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown') && (
+        <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
+      )}
       </ErrorBoundary>
     </SidebarProvider>
   );

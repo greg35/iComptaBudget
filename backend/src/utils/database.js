@@ -2,17 +2,17 @@ const fs = require('fs');
 const initSqlJs = require('sql.js');
 const config = require('../config');
 
-async function openDb() {
+async function openDb(dbPath) {
   const SQL = await initSqlJs();
   
   // Check if the main database file exists
-  if (!fs.existsSync(config.DB_PATH)) {
+  if (!fs.existsSync(dbPath)) {
     // Return a temporary empty database if the main file doesn't exist
-    console.warn(`Main database file ${config.DB_PATH} does not exist, creating temporary empty database`);
+    console.warn(`Main database file ${dbPath} does not exist, creating temporary empty database`);
     return new SQL.Database();
   }
-  
-  const filebuffer = fs.readFileSync(config.DB_PATH);
+
+  const filebuffer = fs.readFileSync(dbPath);
   const db = new SQL.Database(filebuffer);
   return db;
 }

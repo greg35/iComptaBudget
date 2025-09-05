@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
     ////////////////////////////////////////////////////////////////////////////////////////
     ////
     ////////////////////////////////////////////////////////////////////////////////////////
-    const db = await openDb();
+    const db = await openDb(config.DB_PATH);
     
     // Detect category ids for savings-related categories (like in projects.js)
     const findCategoryId = (db, name) => {
