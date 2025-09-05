@@ -4,7 +4,12 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
-## [1.4.8] - 2025-09-05
+## [1.5.1] - 2025-09-05
+
+### Corrigé
+- Utilisation du changelog.md pour le contenu de la release Github.
+
+## [1.5.0] - 2025-09-05
 
 ### Ajouté
 - Bouton "+ de détail" dans le panneau des objectifs d'épargne pour afficher/masquer les informations secondaires

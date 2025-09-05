@@ -116,35 +116,57 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
-# Générer les notes de release automatiquement
+# Générer les notes de release automatiquement (priorité au CHANGELOG)
 RELEASE_NOTES=""
 
-# Essayer de récupérer les commits depuis la dernière release
-LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+# Dernier tag (avant la nouvelle version) pour lien de comparaison
+LAST_TAG=$(git tag --sort=-creatordate | grep -v "^v$NEW_VERSION$" | head -1 || echo "")
 
-if [[ -n "$LAST_TAG" ]]; then
-    echo_info "Génération des notes de release depuis $LAST_TAG..."
-    
-    # Récupérer les commits depuis le dernier tag
-    COMMITS=$(git log --oneline "$LAST_TAG"..HEAD --no-merges | head -20)
-    
-    if [[ -n "$COMMITS" ]]; then
-        RELEASE_NOTES="## 🚀 Nouveautés
+# Extraire la section du CHANGELOG correspondant à la nouvelle version
+if [[ -f CHANGELOG.md ]]; then
+    echo_info "Extraction de la section du CHANGELOG pour v$NEW_VERSION..."
+    CHANGELOG_SECTION=$(awk -v ver="$NEW_VERSION" '
+        BEGIN { capture=0 }
+        /^## \[/ {
+            if ($0 ~ "\\[" ver "\\]") { capture=1; print; next }
+            else if (capture==1) { exit } # on sort quand on arrive à la section suivante
+        }
+        capture==1 { print }
+    ' CHANGELOG.md)
 
-$COMMITS
+    if [[ -n "$CHANGELOG_SECTION" ]]; then
+        # Retirer la première ligne (le titre de section) pour reformater proprement dans les notes
+        SECTION_BODY=$(echo "$CHANGELOG_SECTION" | tail -n +2)
+        RELEASE_NOTES="## 📝 Changelog v$NEW_VERSION
 
-## 📋 Changements complets
-Voir tous les changements: [\`$LAST_TAG...v$NEW_VERSION\`](https://github.com/greg35/iComptaBudget/compare/$LAST_TAG...v$NEW_VERSION)"
+$SECTION_BODY"
+        if [[ -n "$LAST_TAG" ]]; then
+            RELEASE_NOTES+="\n\n## 🔍 Comparaison\n[\`$LAST_TAG...v$NEW_VERSION\`](https://github.com/greg35/iComptaBudget/compare/$LAST_TAG...v$NEW_VERSION)"
+        fi
     fi
 fi
 
-# Notes de release par défaut si aucun commit trouvé
+# Si pas trouvé dans le CHANGELOG, fallback commits récents
+if [[ -z "$RELEASE_NOTES" ]]; then
+    if [[ -n "$LAST_TAG" ]]; then
+        echo_info "Génération des notes à partir des commits depuis $LAST_TAG (section CHANGELOG introuvable)."
+        COMMITS=$(git log --oneline "$LAST_TAG"..HEAD --no-merges | head -20)
+        if [[ -n "$COMMITS" ]]; then
+            RELEASE_NOTES="## 🚀 Changements récents
+
+$COMMITS
+
+## 📋 Détails
+Consultez le [CHANGELOG.md](https://github.com/greg35/iComptaBudget/blob/main/CHANGELOG.md) pour la liste complète."
+        fi
+    fi
+fi
+
+# Fallback final générique
 if [[ -z "$RELEASE_NOTES" ]]; then
     RELEASE_NOTES="## 🚀 Release v$NEW_VERSION
 
-Nouvelle version de iComptaBudget avec corrections et améliorations.
-
-Pour plus de détails, consultez le [CHANGELOG.md](https://github.com/greg35/iComptaBudget/blob/main/CHANGELOG.md)."
+Publication de la version. Voir le [CHANGELOG.md](https://github.com/greg35/iComptaBudget/blob/main/CHANGELOG.md) pour les détails."
 fi
 
 # Créer la release GitHub
