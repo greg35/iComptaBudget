@@ -7,7 +7,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-2112}:2112"
     volumes:
-      - /docker/icomptabudget/data:/data
+      - ../icomptabudgetTest/data:/data
     environment:
       - NODE_ENV=production
       - FRONTEND_PORT=2112

@@ -60,8 +60,33 @@ async function ensureDataDbExists() {
     console.error('Impossible de créer le dossier pour la base de données:', e && e.message);
   }
 
-  // If file does not exist, create and populate it
-  if (!fs.existsSync(config.DATA_DB_PATH)) {
+  // Helper: vérifier si le fichier SQLite est valide (header + taille minimale)
+  function isValidSqlite(fp) {
+    try {
+      if (!fs.existsSync(fp)) return false;
+      const stat = fs.statSync(fp);
+      if (!stat.isFile()) return false;
+      if (stat.size < 100) return false; // fichier SQLite minimal > ~100 octets
+      const fd = fs.openSync(fp, 'r');
+      const buf = Buffer.alloc(16);
+      fs.readSync(fd, buf, 0, 16, 0);
+      fs.closeSync(fd);
+      return buf.toString('utf8') === 'SQLite format 3\0';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  const dataDbExists = fs.existsSync(config.DATA_DB_PATH);
+  const dataDbValid = isValidSqlite(config.DATA_DB_PATH);
+
+  if (!dataDbExists || !dataDbValid) {
+    if (dataDbExists && !dataDbValid) {
+      console.warn('Detected invalid or empty data DB file, recreating:', config.DATA_DB_PATH);
+    } else if (!dataDbExists) {
+      console.log('Data DB does not exist, creating:', config.DATA_DB_PATH);
+    }
+    // (Re)create and populate it
     const outDb = new SQL.Database();
     outDb.run(`CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +132,7 @@ async function ensureDataDbExists() {
     fs.writeFileSync(config.DATA_DB_PATH, Buffer.from(binary));
     outDb.close();
     console.log('Created and populated SQLite data DB:', config.DATA_DB_PATH, 'inserted projects:', srcCount);
-    return;
+  return; // freshly created
   }
 
   // If file exists, ensure it has rows; if empty, populate

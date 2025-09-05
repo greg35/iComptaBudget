@@ -135,30 +135,53 @@ set -e
 
 APP_USER=appuser
 APP_GROUP=nodejs
+APP_UID=1001
+APP_GID=1001
 DATA_DIR=${DATA_DIR:-/data}
 
+echo "[entrypoint] Starting with user=$(id -u), DATA_DIR=$DATA_DIR"
+
+# Créer les répertoires nécessaires
 mkdir -p "$DATA_DIR" /app/logs || true
 
-# Si root, tenter de réparer ownership si pas writable par l'utilisateur cible
+# Toujours corriger les permissions si on est root
 if [ "$(id -u)" = "0" ]; then
-  if [ ! -w "$DATA_DIR" ]; then
-    chown -R "$APP_USER:$APP_GROUP" "$DATA_DIR" || true
-  fi
-  chown -R "$APP_USER:$APP_GROUP" /app/logs || true
+  echo "[entrypoint] Running as root, fixing permissions..."
+  
+  # Forcer la correction des permissions du volume data
+  chown -R "$APP_UID:$APP_GID" "$DATA_DIR" || true
+  chmod -R 775 "$DATA_DIR" || true
+  
+  # Corriger les logs aussi
+  chown -R "$APP_UID:$APP_GID" /app/logs || true
+  chmod 755 /app/logs || true
+  
+  echo "[entrypoint] Permissions fixed for $DATA_DIR"
+else
+  echo "[entrypoint] Running as non-root user $(id -u)"
 fi
 
-# Pré-créer les fichiers DB si absents (évite EACCES lors du premier write)
-[ -n "$DB_PATH" ] && [ ! -e "$DB_PATH" ] && touch "$DB_PATH" || true
-[ -n "$DATA_DB_PATH" ] && [ ! -e "$DATA_DB_PATH" ] && touch "$DATA_DB_PATH" || true
+# Pré-créer les fichiers DB si absents avec les bonnes permissions
+if [ -n "$DB_PATH" ] && [ ! -e "$DB_PATH" ]; then
+  touch "$DB_PATH" || true
+  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DB_PATH" || true
+fi
 
-# Autorisations minimales (rw pour user, r pour groupe)
-chmod 660 "$DATA_DB_PATH" 2>/dev/null || true
+if [ -n "$DATA_DB_PATH" ] && [ ! -e "$DATA_DB_PATH" ]; then
+  touch "$DATA_DB_PATH" || true
+  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DATA_DB_PATH" || true
+fi
 
-echo "[entrypoint] DATA_DIR=$DATA_DIR DB_PATH=$DB_PATH DATA_DB_PATH=$DATA_DB_PATH"
+# Vérifier les permissions finales
+echo "[entrypoint] Final permissions check:"
+ls -la "$DATA_DIR" || true
 
+# Démarrer l'application
 if [ "$(id -u)" = "0" ]; then
-  exec su-exec "$APP_USER:$APP_GROUP" node server.js
+  echo "[entrypoint] Switching to user $APP_UID:$APP_GID and starting server..."
+  exec su-exec "$APP_UID:$APP_GID" node server.js
 else
+  echo "[entrypoint] Starting server as current user..."
   exec node server.js
 fi
 EOF
