@@ -140,9 +140,6 @@ if [[ -f CHANGELOG.md ]]; then
         RELEASE_NOTES="## 📝 Changelog v$NEW_VERSION
 
 $SECTION_BODY"
-        if [[ -n "$LAST_TAG" ]]; then
-            RELEASE_NOTES+="\n\n## 🔍 Comparaison\n[\`$LAST_TAG...v$NEW_VERSION\`](https://github.com/greg35/iComptaBudget/compare/$LAST_TAG...v$NEW_VERSION)"
-        fi
     fi
 fi
 
