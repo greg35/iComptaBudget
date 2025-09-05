@@ -1,3 +1,4 @@
+import { apiFetch } from './apiClient';
 import { toast } from "sonner";
 
 interface UpdateAccountsOptions {
@@ -22,7 +23,7 @@ export async function updateAccounts({
       return false;
     }
 
-  const response = await fetch('/api/update-accounts', {
+    const response = await apiFetch('/api/update-accounts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

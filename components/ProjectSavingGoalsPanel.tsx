@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/apiClient';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -28,10 +29,10 @@ export function ProjectSavingGoalsPanel({ projectId }: Props) {
     setLoading(true); setError(null);
     try {
       const [histRes, suggRes, perfRes, projectsRes] = await Promise.all([
-        fetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}`),
-        fetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/suggest`, { method: 'POST' }),
-        fetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/month/${todayMonth}`),
-        fetch('/api/projects')
+        apiFetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}`),
+        apiFetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/suggest`, { method: 'POST' }),
+        apiFetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/month/${todayMonth}`),
+        apiFetch('/api/projects')
       ]);
       if (!histRes.ok) throw new Error('hist');
       const hist = await histRes.json();
@@ -71,7 +72,7 @@ export function ProjectSavingGoalsPanel({ projectId }: Props) {
     if (!suggestion) return;
     setAccepting(true); setError(null);
     try {
-      const res = await fetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/accept`, {
+  const res = await apiFetch(`/api/saving-goals/project/${encodeURIComponent(projectId)}/accept`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newAmount: suggestion.suggestedGoal, reason: `auto-adjust (${suggestion.status})` })
       });

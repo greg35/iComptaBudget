@@ -17,6 +17,7 @@ import { Toaster } from "./components/ui/sonner";
 import { ProjectsTableView } from "./components/ProjectsTableView";
 import { toast } from "sonner";
 import { updateAccounts } from "./utils/accountsApi";
+import { apiFetch } from "./utils/apiClient";
 
 // Projects will be loaded from backend at runtime
 // Load savings accounts from backend (accounts under folder 'Disponible')
@@ -39,7 +40,7 @@ export default function App() {
     (async () => {
       try {
         // Use the dedicated first startup detection endpoint
-        const res = await fetch('/api/first-startup');
+  const res = await apiFetch('/api/first-startup');
         if (!mounted) return;
         
         if (res.ok) {
@@ -65,7 +66,7 @@ export default function App() {
   const loadProjects = async () => {
     setLoadingProjects(true);
     try {
-      const res = await fetch('/api/projects');
+  const res = await apiFetch('/api/projects');
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data = await res.json();
       
@@ -85,7 +86,7 @@ export default function App() {
 
         // Récupérer l'objectif d'épargne mensuel le plus récent
         try {
-          const goalsRes = await fetch(`/api/saving-goals/project/${normalized.id}`);
+          const goalsRes = await apiFetch(`/api/saving-goals/project/${normalized.id}`);
           if (goalsRes.ok) {
             const goals = await goalsRes.json();
             // Trouver l'objectif actif (celui sans endDate ou avec la endDate la plus récente)
@@ -120,7 +121,7 @@ export default function App() {
   const refreshProjectSavings = async (projectId: string) => {
     try {
       // Récupérer les données du projet depuis l'API
-      const res = await fetch('/api/projects');
+  const res = await apiFetch('/api/projects');
       if (!res.ok) return;
       const data = await res.json();
       const projectData = data.find((p: any) => String(p.id) === projectId);
@@ -184,7 +185,7 @@ export default function App() {
     
     (async () => {
       try {
-  const res = await fetch('/api/settings');
+  const res = await apiFetch('/api/settings');
         if (!res.ok) throw new Error('failed to fetch settings');
         const data = await res.json();
         if (!mounted) return;
@@ -207,7 +208,7 @@ export default function App() {
     
     (async () => {
       try {
-        const res = await fetch('/api/accounts?filterType=savings');
+  const res = await apiFetch('/api/accounts?filterType=savings');
         if (!res.ok) throw new Error('failed to fetch accounts');
         const data = await res.json();
         if (!mounted) return;
@@ -240,7 +241,7 @@ export default function App() {
   const projectKey = selectedProjectId;
     (async () => {
       try {
-        const res = await fetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
+  const res = await apiFetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
         if (!res.ok) throw new Error('failed to fetch project transactions');
         const data = await res.json();
         if (!mounted) return;
@@ -346,7 +347,7 @@ export default function App() {
           endDate: projectData.endDate || null,
           plannedBudget: Number(projectData.plannedBudget || 0) || 0
         };
-        const res = await fetch('/api/projects', {
+  const res = await apiFetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
@@ -397,7 +398,7 @@ export default function App() {
     
     try {
       // Call backend to update archived state
-  const response = await fetch(`/api/projects/${projectId}`, {
+  const response = await apiFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -444,7 +445,7 @@ export default function App() {
 
     try {
       // Call backend to delete project
-  const response = await fetch(`/api/projects/${projectId}`, {
+  const response = await apiFetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -512,7 +513,7 @@ export default function App() {
         const currentDate = new Date();
         const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
         
-        const response = await fetch('/api/saving-goals', {
+  const response = await apiFetch('/api/saving-goals', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

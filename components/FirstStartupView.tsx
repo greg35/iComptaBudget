@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Settings, Download, ExternalLink, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { updateAccounts } from "../utils/accountsApi";
+import { apiFetch } from "../utils/apiClient";
 
 interface FirstStartupViewProps {
   onComplete: () => void;
@@ -25,7 +26,7 @@ export function FirstStartupView({ onComplete }: FirstStartupViewProps) {
 
     setIsConfiguring(true);
     try {
-  const response = await fetch('/api/settings', {
+  const response = await apiFetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

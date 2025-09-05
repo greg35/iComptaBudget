@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../utils/apiClient';
 import { Project, ProjectSavingGoal, ProjectAllocation } from '../types/budget';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -184,7 +185,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   // Fonction pour sauvegarder l'épargne libre avec le nouveau composant
   const saveFreeSavingsInline = async (amount: number) => {
     try {
-      const response = await fetch('/api/monthly-manual-savings', {
+  const response = await apiFetch('/api/monthly-manual-savings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
