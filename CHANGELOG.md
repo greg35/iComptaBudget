@@ -5,6 +5,53 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.4.7] - 2025-09-05
+
+### Ajouté
+- Bouton "+ de détail" dans le panneau des objectifs d'épargne pour afficher/masquer les informations secondaires
+
+### Modifié
+- Détails des objectifs repliés par défaut pour alléger l'interface
+
+### Corrigé
+- Amélioration mineure de l'ergonomie (réduction du scroll vertical inutile)
+
+## [1.4.6] - 2025-09-04
+
+### Modifié
+- Footer global d'épargne repositionné (largeur calculée sans la sidebar)
+- Style sticky ajusté pour éviter le chevauchement avec la barre latérale
+
+### Corrigé
+- Problème d'affichage du footer recouvrant le contenu principal
+
+## [1.4.5] - 2025-09-04
+
+### Ajouté
+- Footer global présentant : épargne totale, épargne projets, épargne libre
+
+### Modifié
+- Ajout d'un padding bas conditionnel lorsque le footer est présent
+
+## [1.4.4] - 2025-09-03
+
+### Modifié
+- Calcul "Reste à épargner" déplacé côté frontend (plannedBudget - currentSavings) pour cohérence visuelle immédiate
+
+### Corrigé
+- Légère divergence entre la suggestion backend et l'affichage du panneau
+
+## [1.4.3] - 2025-09-03
+
+### Ajouté
+- Intégration des transactions d'épargne manuelles (manualSaved) dans la suggestion des objectifs
+
+### Modifié
+- Endpoint de suggestion enrichi avec la clé `manualSaved` pour transparence
+
+### Corrigé
+- Décalage entre le remainingBudget suggéré et les montants réellement épargnés manuellement
+
 ## [1.4.2]
 
 ### Ajouté
