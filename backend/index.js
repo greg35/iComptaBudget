@@ -4,6 +4,8 @@ const corsMiddleware = require('./src/middleware/cors');
 const { ensureDataDbExists, migrateDataDb } = require('./src/services/projectService');
 
 // Import route modules
+const authRoutes = require('./src/routes/auth');
+const authMiddleware = require('./src/middleware/auth');
 const projectsRoutes = require('./src/routes/projects');
 const settingsRoutes = require('./src/routes/settings');
 const accountsRoutes = require('./src/routes/accounts');
@@ -24,6 +26,11 @@ app.use(corsMiddleware);
 app.use(express.json());
 
 // Configure routes
+app.use('/api/auth', authRoutes);
+
+// Appliquer l'authentification à toutes les autres routes API
+app.use('/api', authMiddleware);
+
 app.use('/api/projects', projectsRoutes);
 app.use('/api', settingsRoutes);
 app.use('/api/accounts', accountsRoutes);

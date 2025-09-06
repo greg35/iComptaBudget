@@ -16,6 +16,8 @@ import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { ProjectsTableView } from "./components/ProjectsTableView";
+import { AuthProvider, useAuth } from "./components/AuthContext";
+import { LoginForm } from "./components/LoginForm";
 import { toast } from "sonner";
 import { updateAccounts } from "./utils/accountsApi";
 import { apiFetch } from "./utils/apiClient";
@@ -24,8 +26,65 @@ import { apiFetch } from "./utils/apiClient";
 // Load savings accounts from backend (accounts under folder 'Disponible')
 const defaultSavingsAccounts: SavingsAccount[] = [];
 
+// Composant principal de l'application avec authentification
+function MainApp() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
-export default function App() {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse">
+          <div className="h-8 w-32 bg-muted rounded mb-4"></div>
+          <div className="h-4 w-48 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthView />;
+  }
+
+  return <BudgetApp />;
+}
+
+// Composant pour gérer l'authentification
+function AuthView() {
+  const { login, register, loading, error, checkUser } = useAuth();
+  const [isFirstUser, setIsFirstUser] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkFirstUser = async () => {
+      const hasUser = await checkUser();
+      setIsFirstUser(!hasUser);
+    };
+    checkFirstUser();
+  }, [checkUser]);
+
+  if (isFirstUser === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse">
+          <div className="h-8 w-32 bg-muted rounded mb-4"></div>
+          <div className="h-4 w-48 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <LoginForm
+      onLogin={login}
+      onRegister={register}
+      loading={loading}
+      error={error}
+      isFirstUser={isFirstUser}
+    />
+  );
+}
+
+// Composant principal du budget (après authentification)
+function BudgetApp() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const [selectedProjectId, setSelectedProjectId] = useState(null as string | null);
   const [projects, setProjects] = useState([] as Project[]);
@@ -644,7 +703,17 @@ export default function App() {
       {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown') && (
         <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
       )}
+      <Toaster />
       </ErrorBoundary>
     </SidebarProvider>
+  );
+}
+
+// Composant racine avec le provider d'authentification
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }

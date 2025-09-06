@@ -1,11 +1,12 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3 } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
 import { VersionInfo } from "./VersionInfo";
+import { useAuth } from "./AuthContext";
 import { useState } from "react";
 
 interface ProjectsSidebarProps {
@@ -23,6 +24,14 @@ interface ProjectsSidebarProps {
 
 export function ProjectsSidebar({ projects, selectedProjectId, currentView, showActiveOnly, onProjectSelect, onViewChange, onCreateProject, onShowActiveOnlyChange, onUpdateAccounts, isUpdatingAccounts }: ProjectsSidebarProps) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const { logout, user } = useAuth();
+  
+  const handleLogout = () => {
+    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      logout();
+    }
+  };
+  
   const fmt = (v?: number | null) => new Intl.NumberFormat('fr-FR').format(Number(v ?? 0));
   // sort projects by name descending (Z -> A), handle missing names
   const sorted = [...(projects || [])].sort((a, b) => {
@@ -101,6 +110,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
               <span>Projection Épargne</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('settings')}
+              isActive={currentView === 'settings'}
+              className="w-full"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Paramètres</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
 
         <Separator className="mb-4" />
@@ -133,30 +152,32 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
       </SidebarContent>
 
             
-      <SidebarFooter className="p-4">
-        <div className="flex gap-2">
-          <SidebarMenu className="flex-1">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => onViewChange('settings')}
-                isActive={currentView === 'settings'}
-                className="w-full h-10"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Paramètres</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-          <Button
-            onClick={onUpdateAccounts}
-            disabled={!onUpdateAccounts || isUpdatingAccounts}
-            size="sm"
-            variant="outline"
-            className="w-12 h-10 p-0 flex-shrink-0"
-            title="Mettre à jour les comptes"
-          >
-            <RotateCw className={`h-4 w-4 ${isUpdatingAccounts ? 'animate-spin' : ''}`} />
-          </Button>
+            <SidebarFooter className="p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs text-muted-foreground">
+            Connecté: {user?.email}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              onClick={handleLogout}
+              size="sm"
+              variant="outline"
+              className="w-10 h-10 p-0 flex-shrink-0"
+              title="Se déconnecter"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={onUpdateAccounts}
+              disabled={!onUpdateAccounts || isUpdatingAccounts}
+              size="sm"
+              variant="outline"
+              className="w-10 h-10 p-0 flex-shrink-0"
+              title="Mettre à jour les comptes"
+            >
+              <RotateCw className={`h-4 w-4 ${isUpdatingAccounts ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
         <div className="flex justify-center mt-2">
           <VersionInfo className="opacity-70" />

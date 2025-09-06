@@ -36,12 +36,38 @@ export function getApiBase(): string {
 
 export async function apiFetch(path: string, init?: RequestInit) {
   const base = getApiBase();
+  
+  // Ajouter le token d'authentification si disponible
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...init?.headers,
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const updatedInit: RequestInit = {
+    ...init,
+    headers,
+  };
+  
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    return fetch(path, init);
+    return fetch(path, updatedInit);
   }
   // Si base contient un sous-chemin et path commence par /api, on concatène: /budget + /api/...
   const url = base && path.startsWith('/api') ? `${base}${path}` : (path.startsWith('/') ? `${base}${path}` : `${base}/${path}`);
-  return fetch(url, init);
+  
+  const response = await fetch(url, updatedInit);
+  
+  // Si la réponse indique que l'authentification a échoué, rediriger vers la page de connexion
+  if (response.status === 401) {
+    localStorage.removeItem('auth_token');
+    window.location.reload(); // Forcer le rechargement pour afficher l'écran de connexion
+  }
+  
+  return response;
 }
 
 // Helper pour construire des URLs d'API (utile dans des libs hors React)

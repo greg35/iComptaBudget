@@ -322,6 +322,26 @@ async function migrateDataDb() {
       console.error('Account preferences table migration failed:', e && e.message);
     }
 
+    // Check if users table exists (pour l'authentification)
+    try {
+      const tablesRes = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+      const hasUsersTable = tablesRes && tablesRes[0] && tablesRes[0].values.length > 0;
+
+      if (!hasUsersTable) {
+        console.log('Creating users table...');
+        db.exec(`CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL UNIQUE,
+          password TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT
+        );`);
+        console.log('Migration completed: users table created');
+      }
+    } catch (e) {
+      console.error('Users table migration failed:', e && e.message);
+    }
+
     const binary = db.export();
     fs.writeFileSync(config.DATA_DB_PATH, Buffer.from(binary));
     db.close();
@@ -362,8 +382,15 @@ async function migrateDataDb() {
   }
 }
 
+async function openDataDb() {
+  const SQL = await initSqlJs();
+  const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
+  return new SQL.Database(filebuffer);
+}
+
 module.exports = {
   syncProjectsFromMainDb,
   ensureDataDbExists,
-  migrateDataDb
+  migrateDataDb,
+  openDataDb
 };

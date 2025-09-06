@@ -7,7 +7,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [1.6.0] - 2025-09-05
 
-### Corrigé
+### Ajouté
 - Ajout Projection de l'épargne attendue par mois.
 
 ## [1.5.4] - 2025-09-05
