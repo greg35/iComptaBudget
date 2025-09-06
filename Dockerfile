@@ -162,15 +162,15 @@ else
 fi
 
 # Pré-créer les fichiers DB si absents avec les bonnes permissions
-if [ -n "$DB_PATH" ] && [ ! -e "$DB_PATH" ]; then
-  touch "$DB_PATH" || true
-  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DB_PATH" || true
-fi
+#if [ -n "$DB_PATH" ] && [ ! -e "$DB_PATH" ]; then
+#  touch "$DB_PATH" || true
+#  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DB_PATH" || true
+#fi
 
-if [ -n "$DATA_DB_PATH" ] && [ ! -e "$DATA_DB_PATH" ]; then
-  touch "$DATA_DB_PATH" || true
-  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DATA_DB_PATH" || true
-fi
+#if [ -n "$DATA_DB_PATH" ] && [ ! -e "$DATA_DB_PATH" ]; then
+#  touch "$DATA_DB_PATH" || true
+#  [ "$(id -u)" = "0" ] && chown "$APP_UID:$APP_GID" "$DATA_DB_PATH" || true
+#fi
 
 # Vérifier les permissions finales
 echo "[entrypoint] Final permissions check:"

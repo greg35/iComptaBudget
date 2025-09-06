@@ -65,8 +65,6 @@ function computeCurrentSavingsSql(db, projectKey, categoryIds) {
 
 function computeCurrentSavingsDataSql(db, projectId) {
   try {
-    console.log('Récup transactions manuelles pour projet:', projectId);
-
     let q;
     q = "SELECT SUM(CAST(t.amount AS REAL)) as s FROM transactions t " +
         "WHERE t.projectId = '" + projectId + "'";

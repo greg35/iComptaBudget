@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.7.0] - 2025-09-06
+
+### Ajouté
+- Ajout gestion d'un login / mot de passe pour protéger les données & API.
+
 ## [1.6.0] - 2025-09-05
 
 ### Ajouté
