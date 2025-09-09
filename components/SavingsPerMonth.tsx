@@ -4,9 +4,9 @@ import { Project, ProjectSavingGoal, ProjectAllocation } from '../types/budget';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil, Loader2 } from 'lucide-react';
 
-interface MonthBreakdownViewProps {
+interface SavingsPerMonthProps {
   projects?: Project[];
   showActiveOnly?: boolean;
 }
@@ -71,44 +71,56 @@ const InlineAmountEditor: React.FC<InlineAmountEditorProps> = ({
     } else if (e.key === 'Escape') {
       setIsEditing(false);
       setEditValue("");
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      // Ajustement rapide au clavier
+      e.preventDefault();
+      const current = parseFloat(editValue || '0') || 0;
+      const delta = 1; // incrément par défaut
+      const next = e.key === 'ArrowUp' ? current + delta : current - delta;
+      setEditValue(next.toString());
     }
   };
 
   if (isEditing) {
     return (
-      <div className="flex items-center">
-        <Input
-          ref={inputRef}
-          type="number"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`w-20 h-8 text-right ${className}`}
-          step="0.01"
-          placeholder={placeholder}
-          disabled={isSaving}
-        />
-        {isSaving && (
-          <div className="ml-2 animate-spin h-4 w-4 border border-gray-300 rounded-full border-t-blue-600" />
-        )}
+      <div className="inline-flex items-center">
+        <div className="relative inline-flex items-center">
+          <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60" />
+          <Input
+            ref={inputRef}
+            type="number"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className={`w-28 h-8 pl-6 pr-6 text-right text-sm rounded-md shadow-sm ${className} focus-visible:ring-0 focus:border-primary`}
+            step="0.01"
+            placeholder={placeholder}
+            disabled={isSaving}
+            aria-label="Montant à enregistrer"
+          />
+          {isSaving && (
+            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-muted-foreground/70" />
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div 
-      className={`relative cursor-pointer group ${className}`}
+      className={`relative inline-flex items-center cursor-pointer group ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
+      role="button"
+      aria-label="Modifier le montant"
+      title="Cliquer pour modifier"
     >
-      <span className="select-none">
-        {formatValue(value)}
+      <span className="select-none inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-transparent hover:border-border hover:bg-muted/60 transition-colors text-right text-sm leading-none">
+        <span>{formatValue(value)}</span>
+        <Pencil className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
       </span>
-      {isHovered && (
-        <Pencil className="absolute -right-6 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground opacity-70" />
-      )}
     </div>
   );
 };
@@ -120,7 +132,7 @@ interface CurrentMonthData {
   targetBreakdown: { [projectName: string]: number };
 }
 
-export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
+export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   projects = [],
   showActiveOnly = false
 }) => {
@@ -193,7 +205,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   // Fonction pour sauvegarder une allocation avec le nouveau composant
   const saveAllocationInline = async (projectId: string, amount: number) => {
     try {
-  const response = await fetch(`/api/project-allocations/${monthKey}`, {
+  const response = await apiFetch(`/api/project-allocations/${monthKey}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +239,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   // Fonction pour charger les allocations existantes
   const loadAllocations = async () => {
     try {
-  const response = await fetch(`/api/project-allocations/${monthKey}`);
+  const response = await apiFetch(`/api/project-allocations/${monthKey}`);
       if (response.ok) {
         const allocationsArray = await response.json();
         const allocationsMap: { [key: string]: ProjectAllocation } = {};
@@ -257,7 +269,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
       try {
         console.log('Fetching monthly savings for monthKey:', monthKey);
         // Ne récupérer que le mois demandé pour optimiser la performance
-  const monthlyResponse = await fetch(`/api/monthly-savings?months=1&targetMonth=${monthKey}`);
+        const monthlyResponse = await apiFetch(`/api/monthly-savings?months=1&targetMonth=${monthKey}`);
         if (monthlyResponse.ok) {
           const monthlyData = await monthlyResponse.json();
           console.log('Monthly savings data received:', monthlyData);
@@ -316,7 +328,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
     
     for (const project of projects) {
       try {
-        const response = await fetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
+        const response = await apiFetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
         if (response.ok) {
           const goals = await response.json();
           goalsCache[project.id] = goals;
@@ -329,7 +341,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
   };
 
   useEffect(() => {
-    console.log('MonthBreakdownView useEffect triggered:', {
+    console.log('SavingsPerMonth useEffect triggered:', {
       projectsLength: projects.length,
       showActiveOnly,
       selectedMonth,
@@ -554,11 +566,7 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
                 <tr className="border-b">
                   <th className="text-left px-4 py-3 font-medium">Projet</th>
                   <th className="text-left px-6 py-3 font-medium">Objectif Mensuel</th>
-                  <th className="px-6 py-3 font-medium">
-                    <div className="flex items-center justify-end">
-                      Épargne iCompta
-                    </div>
-                  </th>
+                  <th className="text-left px-6 py-3 font-medium">Épargne Réalisée</th>
                   <th className="text-right px-6 py-3 font-medium">Différence</th>
                   <th className="text-center px-4 py-3 font-medium">Statut</th>
                 </tr>
@@ -596,6 +604,28 @@ export const MonthBreakdownView: React.FC<MonthBreakdownViewProps> = ({
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 bg-muted/50">
+                  <td className="px-4 py-3 font-bold">TOTAL</td>
+                  <td className="px-6 py-3 text-left font-bold">{formatCurrency(totalTarget)}</td>
+                  <td className="px-6 py-3 text-left font-bold">{formatCurrency(projectSavings)}</td>
+                  <td className={`px-6 py-3 text-right font-bold ${
+                    (projectSavings - totalTarget) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {(projectSavings - totalTarget) >= 0 ? '+' : ''}{formatCurrency(projectSavings - totalTarget)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                      (projectSavings - totalTarget) >= 0 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      <Target className="h-3 w-3" />
+                      {(projectSavings - totalTarget) >= 0 ? 'Objectifs atteints' : 'Objectifs non atteints'}
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 

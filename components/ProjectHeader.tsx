@@ -173,7 +173,7 @@ function NameEditor({ project, onChange }: { project: Project, onChange?: (proje
     if (!trimmedValue) return;
     
     try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(project.id)}`, {
         method: 'PATCH', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmedValue })
@@ -252,7 +252,7 @@ function BudgetEditor({ project, onChange }: { project: Project, onChange?: (pro
     const num = Number(value);
     if (isNaN(num)) return;
     try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(project.id)}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plannedBudget: num })
       });
@@ -305,7 +305,7 @@ function DateEditor({ label, value, projectId, onChange }: { label: string; valu
     else payload.endDate = dateValue || null;
 
     try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
+      const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });

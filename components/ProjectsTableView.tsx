@@ -8,6 +8,7 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { TableProperties, Check, X, Archive, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from '../utils/apiClient';
 
 interface ProjectAllocation {
   projectId: string;
@@ -34,7 +35,7 @@ export function ProjectsTableView({ projects, onUpdateProject, onProjectSelect, 
       try {
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const response = await fetch(`/api/project-allocations/${currentMonth}`);
+        const response = await apiFetch(`/api/project-allocations/${currentMonth}`);
         
         if (response.ok) {
           const allocations = await response.json();
@@ -56,6 +57,7 @@ export function ProjectsTableView({ projects, onUpdateProject, onProjectSelect, 
   // Fonction pour obtenir l'allocation actuelle d'un projet
   const getCurrentAllocation = (projectId: string): number => {
     const allocation = currentAllocations.find(a => a.projectId === projectId);
+    console.log(`Allocation for project ${projectId}:`, allocation?.allocatedAmount);
     return allocation?.allocatedAmount || 0;
   };
 
@@ -203,10 +205,10 @@ export function ProjectsTableView({ projects, onUpdateProject, onProjectSelect, 
                 <TableHead>Nom du projet</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Budget prévu</TableHead>
-                <TableHead>Épargné</TableHead>
+                <TableHead>Total Épargné</TableHead>
                 <TableHead>Progression</TableHead>
-                <TableHead>Alloué ce mois</TableHead>
-                <TableHead>Épargne mensuelle</TableHead>
+                <TableHead><div className="text-center">Alloué ce mois</div></TableHead>
+                <TableHead>Objectif mensuel</TableHead>
                 <TableHead>Échéance</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -226,17 +228,15 @@ export function ProjectsTableView({ projects, onUpdateProject, onProjectSelect, 
                   return (
                     <TableRow key={project.id} className="hover:bg-muted/50">
                       <TableCell>
-                        <div>
                           <div className="font-medium">{project.name}</div>
-                        </div>
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(project)}
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">
-                          {project.plannedBudget.toLocaleString('fr-FR')}€
-                        </span>
+                          <span className="font-medium">
+                            {project.plannedBudget.toLocaleString('fr-FR')}€
+                          </span>
                       </TableCell>
                       <TableCell>
                         <div>

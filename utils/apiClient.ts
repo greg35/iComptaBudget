@@ -31,6 +31,17 @@ export function getApiBase(): string {
     // On suppose que l'API est accessible à la racine du sous-chemin: /budget/api
     return cleaned;
   }
+
+  // Heuristic for local development when no proxy/base is configured:
+  // If running on localhost and no base provided, default to backend port 2113.
+  if (typeof window !== 'undefined') {
+    try {
+      const { protocol, hostname } = window.location;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return `${protocol}//127.0.0.1:2113`;
+      }
+    } catch {}
+  }
   return '';
 }
 
@@ -59,7 +70,7 @@ export async function apiFetch(path: string, init?: RequestInit) {
   // Si base contient un sous-chemin et path commence par /api, on concatène: /budget + /api/...
   const url = base && path.startsWith('/api') ? `${base}${path}` : (path.startsWith('/') ? `${base}${path}` : `${base}/${path}`);
   
-  const response = await fetch(url, updatedInit);
+  const response = await apiFetch(url, updatedInit);
   
   // Si la réponse indique que l'authentification a échoué, rediriger vers la page de connexion
   if (response.status === 401) {

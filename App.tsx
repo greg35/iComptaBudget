@@ -9,7 +9,7 @@ import { HomeView } from "./components/HomeView";
 import { GlobalSavingsFooter } from "./components/GlobalSavingsFooter";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
-import { MonthBreakdownView } from "./components/MonthBreakdownView";
+import { SavingsPerMonth } from "./components/SavingsPerMonth";
 import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
@@ -52,7 +52,33 @@ function MainApp() {
 function AuthView() {
   const { login, register, loading, error, checkUser } = useAuth();
   const [isFirstUser, setIsFirstUser] = useState<boolean | null>(null);
+  const [checkingFirstStartup, setCheckingFirstStartup] = useState(true);
+  const [isFirstStartup, setIsFirstStartup] = useState<boolean | null>(null);
 
+  // Check if first-startup (public, no auth required)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/first-startup');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) setIsFirstStartup(Boolean(data.isFirstStartup));
+        } else {
+          // On échec, ne pas forcer le mode premier démarrage
+          if (mounted) setIsFirstStartup(false);
+        }
+      } catch {
+        // Sur erreur réseau, ne pas bloquer sur l'écran de configuration
+        if (mounted) setIsFirstStartup(false);
+      } finally {
+        if (mounted) setCheckingFirstStartup(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Also check if there is already a user (to adapt LoginForm content)
   useEffect(() => {
     const checkFirstUser = async () => {
       const hasUser = await checkUser();
@@ -61,7 +87,7 @@ function AuthView() {
     checkFirstUser();
   }, [checkUser]);
 
-  if (isFirstUser === null) {
+  if (checkingFirstStartup || isFirstUser === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse">
@@ -69,6 +95,16 @@ function AuthView() {
           <div className="h-4 w-48 bg-muted rounded"></div>
         </div>
       </div>
+    );
+  }
+
+  // If it's first startup, show the setup assistant even before authentication
+  if (isFirstStartup) {
+    return (
+      <>
+        <FirstStartupView onComplete={() => window.location.reload()} />
+        <Toaster />
+      </>
     );
   }
 
@@ -100,22 +136,22 @@ function BudgetApp() {
     (async () => {
       try {
         // Use the dedicated first startup detection endpoint
-  const res = await apiFetch('/api/first-startup');
+        const res = await fetch('/api/first-startup');
         if (!mounted) return;
         
         if (res.ok) {
           const data = await res.json();
           console.log('First startup check:', data);
-          setIsFirstStartup(data.isFirstStartup);
+          setIsFirstStartup(Boolean(data.isFirstStartup));
         } else {
-          // If endpoint fails, assume it's first startup
-          console.log('First startup endpoint failed, assuming first startup');
-          setIsFirstStartup(true);
+          // Do not block on setup screen if endpoint fails
+          console.log('First startup endpoint failed, treating as not first startup');
+          setIsFirstStartup(false);
         }
       } catch (e) {
         console.error('Error checking first startup:', e);
-        // If we can't reach the backend, assume it's first startup
-        if (mounted) setIsFirstStartup(true);
+        // On network error, prefer not to show setup screen by default
+        if (mounted) setIsFirstStartup(false);
       } finally {
         if (mounted) setCheckingFirstStartup(false);
       }
@@ -126,7 +162,7 @@ function BudgetApp() {
   const loadProjects = async () => {
     setLoadingProjects(true);
     try {
-  const res = await apiFetch('/api/projects');
+      const res = await apiFetch('/api/projects');
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data = await res.json();
       
@@ -181,7 +217,7 @@ function BudgetApp() {
   const refreshProjectSavings = async (projectId: string) => {
     try {
       // Récupérer les données du projet depuis l'API
-  const res = await apiFetch('/api/projects');
+      const res = await apiFetch('/api/projects');
       if (!res.ok) return;
       const data = await res.json();
       const projectData = data.find((p: any) => String(p.id) === projectId);
@@ -191,7 +227,7 @@ function BudgetApp() {
       let currentSavings = Number(projectData.currentSavings ?? 0) || 0;
       
       try {
-        const transactionsRes = await fetch(`/api/transactions?project=${projectId}`);
+        const transactionsRes = await apiFetch(`/api/transactions?project=${projectId}`);
         if (transactionsRes.ok) {
           const transactions = await transactionsRes.json();
           // Filtrer uniquement les transactions d'allocation créées par notre système
@@ -245,7 +281,7 @@ function BudgetApp() {
     
     (async () => {
       try {
-  const res = await apiFetch('/api/settings');
+        const res = await apiFetch('/api/settings');
         if (!res.ok) throw new Error('failed to fetch settings');
         const data = await res.json();
         if (!mounted) return;
@@ -268,7 +304,7 @@ function BudgetApp() {
     
     (async () => {
       try {
-  const res = await apiFetch('/api/accounts?filterType=savings');
+        const res = await apiFetch('/api/accounts?filterType=savings');
         if (!res.ok) throw new Error('failed to fetch accounts');
         const data = await res.json();
         if (!mounted) return;
@@ -301,7 +337,7 @@ function BudgetApp() {
   const projectKey = selectedProjectId;
     (async () => {
       try {
-  const res = await apiFetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
+        const res = await apiFetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
         if (!res.ok) throw new Error('failed to fetch project transactions');
         const data = await res.json();
         if (!mounted) return;
@@ -407,7 +443,7 @@ function BudgetApp() {
           endDate: projectData.endDate || null,
           plannedBudget: Number(projectData.plannedBudget || 0) || 0
         };
-  const res = await apiFetch('/api/projects', {
+          const res = await apiFetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
@@ -659,7 +695,7 @@ function BudgetApp() {
               showActiveOnly={showActiveOnly}
             />
           ) : currentView === "month-breakdown" ? (
-            <MonthBreakdownView
+            <SavingsPerMonth
               projects={projects}
               showActiveOnly={showActiveOnly}
             />
@@ -700,7 +736,7 @@ function BudgetApp() {
           )}
         </main>
       </div>
-      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown') && (
+      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne') && (
         <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
       )}
       <Toaster />

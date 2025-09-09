@@ -11,15 +11,37 @@ const router = express.Router();
 // First startup detection endpoint
 router.get('/first-startup', async (req, res) => {
   try {
-    // Check if the main iCompta database file exists
-    if (!fs.existsSync(config.DB_PATH)) {
-      return res.json({ isFirstStartup: true, reason: 'no_main_database' });
+    // Consider not first-startup if our app data DB exists and looks valid
+    const dataDbExists = fs.existsSync(config.DATA_DB_PATH);
+    let dataDbValid = false;
+    if (dataDbExists) {
+      try {
+        const stat = fs.statSync(config.DATA_DB_PATH);
+        if (stat.isFile() && stat.size >= 100) {
+          const fd = fs.openSync(config.DATA_DB_PATH, 'r');
+          const buf = Buffer.alloc(16);
+          fs.readSync(fd, buf, 0, 16, 0);
+          fs.closeSync(fd);
+          dataDbValid = buf.toString('utf8') === 'SQLite format 3\0';
+        }
+      } catch {}
     }
-    
-    return res.json({ isFirstStartup: false, reason: 'main_database_exists' });
+
+    if (dataDbValid) {
+      return res.json({ isFirstStartup: false, reason: 'data_database_exists' });
+    }
+
+    // If main iCompta database exists, also not first startup
+    if (fs.existsSync(config.DB_PATH)) {
+      return res.json({ isFirstStartup: false, reason: 'main_database_exists' });
+    }
+
+    // Otherwise, we need to bootstrap
+    return res.json({ isFirstStartup: true, reason: 'no_database_found' });
   } catch (e) {
     console.error('Error checking first startup:', e);
-    return res.json({ isFirstStartup: true, reason: 'error' });
+    // Be conservative: if there is any error checking, assume not first-startup to avoid blocking usage
+    return res.json({ isFirstStartup: false, reason: 'check_error_treated_as_not_first_startup' });
   }
 });
 

@@ -3,6 +3,7 @@ import { Project, ProjectSavingGoal } from "../types/budget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { TrendingUp, Calendar } from "lucide-react";
+import { apiFetch } from "../utils/apiClient";
 
 interface MonthlySavingsViewProps {
   projects: Project[];
@@ -42,7 +43,7 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
     try {
       const promises = filteredProjects.map(async (project) => {
         try {
-          const response = await fetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
+          const response = await apiFetch(`/api/saving-goals/project/${encodeURIComponent(project.id)}`);
           if (response.ok) {
             goalsCache[project.id] = await response.json();
           }
@@ -71,7 +72,7 @@ export function MonthlySavingsView({ projects, showActiveOnly }: MonthlySavingsV
     setLoading(true);
     try {
       // Appel à l'API pour récupérer les données réelles
-  const response = await fetch(`/api/monthly-savings?months=${monthsToShow}`);
+  const response = await apiFetch(`/api/monthly-savings?months=${monthsToShow}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

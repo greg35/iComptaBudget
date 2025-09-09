@@ -60,7 +60,7 @@ console.log('Starting server with port:', port);
     await migrateDataDb();
     console.log('Starting express server...');
     app.listen(port, () => {
-      console.log(`Backend listening on http://${config.HOST}:${port}/api/projects`);
+      console.log(`Backend listening on http://${config.HOST}:${port}/api/`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

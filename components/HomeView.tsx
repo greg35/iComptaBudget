@@ -220,7 +220,7 @@ export function HomeView({ projects, savingsAccounts }: HomeViewProps) {
             <CardDescription>Budget prévu, épargné et dépensé par projet</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
+            <div className="h-[400px]">       
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={projectsChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
