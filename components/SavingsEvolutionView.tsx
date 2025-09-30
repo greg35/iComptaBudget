@@ -50,6 +50,65 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
     setEndDate(endOfCurrentMonth.toISOString().substring(0, 7));
   }, []);
 
+  const fallbackTotalSavings = Array.isArray(_savingsAccounts)
+    ? _savingsAccounts.reduce((sum: number, account: any) => sum + (Number(account?.balance) || 0), 0)
+    : 0;
+  const fallbackProjectSavings = Array.isArray(_projects)
+    ? _projects.reduce((sum: number, project: any) => sum + (Number(project?.currentSavings) || 0), 0)
+    : 0;
+  const fallbackFreeSavings = Math.max(0, fallbackTotalSavings - fallbackProjectSavings);
+
+  const projectMetaById = React.useMemo(() => {
+    const map: Record<string, any> = {};
+    (_projects || []).forEach((project: any) => {
+      if (project?.id != null) map[String(project.id)] = project;
+    });
+    return map;
+  }, [_projects]);
+
+  const projectMetaByName = React.useMemo(() => {
+    const map: Record<string, any> = {};
+    (_projects || []).forEach((project: any) => {
+      if (project?.name) map[String(project.name)] = project;
+    });
+    return map;
+  }, [_projects]);
+
+  const parseMonthKey = React.useCallback((monthKey: string | null | undefined) => {
+    if (!monthKey || !/^\d{4}-\d{2}$/.test(monthKey)) return null;
+    const [year, month] = monthKey.split('-').map(Number);
+    return { year, month };
+  }, []);
+
+  const compareMonth = React.useCallback((a: string | null | undefined, b: string | null | undefined) => {
+    const pa = parseMonthKey(a);
+    const pb = parseMonthKey(b);
+    if (!pa || !pb) return 0;
+    if (pa.year !== pb.year) return pa.year - pb.year;
+    return pa.month - pb.month;
+  }, [parseMonthKey]);
+
+  const getProjectMeta = React.useCallback((key: string) => {
+    return projectMetaById[key] ?? projectMetaByName[key] ?? null;
+  }, [projectMetaById, projectMetaByName]);
+
+  const hasProjectStarted = React.useCallback((project: any, monthKey: string) => {
+    if (!project) return true;
+    if (project.startDate) {
+      return compareMonth(monthKey, String(project.startDate).slice(0, 7)) >= 0;
+    }
+    return true;
+  }, [compareMonth]);
+
+  const isProjectActiveForMonth = React.useCallback((project: any, monthKey: string) => {
+    if (!project) return true;
+    if (project.archived) return false;
+    if (project.endDate) {
+      return compareMonth(monthKey, String(project.endDate).slice(0, 7)) <= 0;
+    }
+    return true;
+  }, [compareMonth]);
+
   const fetchEvolutionData = async (force = false) => {
     try {
       setLoading(true);
@@ -95,31 +154,85 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
         const historyRaw = await historyResponse.json();
         const sortedHistory = (historyRaw || []).sort((a: any, b: any) => String(a.month).localeCompare(String(b.month)));
 
-        let cumulativeAllocated = 0;
-        let cumulativeSpent = 0;
+        const cumulativeSavedPerProject = new Map<string, number>();
+        const cumulativeSpentPerProject = new Map<string, number>();
 
         dataset = sortedHistory.map((item: any) => {
+          const monthKey = String(item.month || '');
           const monthlySavings = Number(item.totalSavings || 0);
-          const projectBreakdown = item.projectBreakdown || {};
-          const allocatedThisMonth = Object.values(projectBreakdown).reduce((sum: number, amount: any) => sum + (Number(amount) || 0), 0);
-          const totalMonthlyProjectSpent = Number(item.totalMonthlyProjectSpent || 0);
-          const savingsAccountsBalance = Number(item.savingsAccountsBalance || 0);
+          const savingsAccountsBalance = Math.max(0, Number(item.savingsAccountsBalance || 0));
 
-          cumulativeAllocated += allocatedThisMonth;
-          cumulativeSpent += totalMonthlyProjectSpent;
+          const breakdownMap = new Map<string, number>();
+          const addBreakdown = (source: Record<string, unknown> | undefined, allowOverride = false) => {
+            if (!source) return;
+            Object.entries(source).forEach(([key, value]) => {
+              const numeric = Number(value);
+              if (!Number.isFinite(numeric)) return;
+              const amount = Math.max(0, numeric);
+              if (amount <= 0) return;
+              if (allowOverride || !breakdownMap.has(key)) {
+                breakdownMap.set(key, amount);
+              }
+            });
+          };
 
-          const projectSavingsRaw = Math.max(0, cumulativeAllocated - cumulativeSpent);
-          const totalSavings = Math.max(0, savingsAccountsBalance);
-          const projectSavings = Math.min(projectSavingsRaw, totalSavings);
-          const freeSavings = Math.max(0, totalSavings - projectSavings);
+          addBreakdown(item.manualProjectBreakdown as Record<string, any> | undefined, true);
+          addBreakdown(item.icomptaProjectBreakdown as Record<string, any> | undefined);
+          if (breakdownMap.size === 0) {
+            addBreakdown(item.projectBreakdown as Record<string, any> | undefined, true);
+          }
+
+          const spentBreakdown = new Map<string, number>();
+          const spentSource = item.projectSpentBreakdown as Record<string, unknown> | undefined;
+          if (spentSource) {
+            Object.entries(spentSource).forEach(([key, value]) => {
+              const numeric = Number(value);
+              if (!Number.isFinite(numeric)) return;
+              const amount = Math.max(0, numeric);
+              if (amount <= 0) return;
+              spentBreakdown.set(key, amount);
+            });
+          }
+
+          const allKeys = new Set<string>([
+            ...cumulativeSavedPerProject.keys(),
+            ...breakdownMap.keys(),
+            ...spentBreakdown.keys(),
+          ]);
+
+          let rawProjectSavings = 0;
+          const projectNets: Record<string, number> = {};
+
+          allKeys.forEach((key) => {
+            const savedTotal = (cumulativeSavedPerProject.get(key) || 0) + (breakdownMap.get(key) || 0);
+            const spentTotal = (cumulativeSpentPerProject.get(key) || 0) + (spentBreakdown.get(key) || 0);
+
+            cumulativeSavedPerProject.set(key, savedTotal);
+            cumulativeSpentPerProject.set(key, spentTotal);
+
+            let net = Math.max(0, savedTotal - spentTotal);
+            const meta = getProjectMeta(key);
+            if (!hasProjectStarted(meta, monthKey) || !isProjectActiveForMonth(meta, monthKey)) {
+              net = 0;
+            }
+
+            if (net > 0) {
+              projectNets[key] = net;
+              rawProjectSavings += net;
+            }
+          });
+
+          const projectSavings = Math.max(0, Math.min(savingsAccountsBalance, rawProjectSavings));
+          const freeSavings = Math.max(0, savingsAccountsBalance - projectSavings);
 
           return {
-            month: String(item.month || ''),
-            totalSavings,
+            month: monthKey,
+            totalSavings: savingsAccountsBalance,
             projectSavings,
             freeSavings,
-            savingsAccounts: totalSavings,
-            monthlySavings
+            savingsAccounts: savingsAccountsBalance,
+            monthlySavings,
+            projectNets
           } as SavingsEvolutionData;
         });
 
@@ -157,14 +270,6 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
   };
 
   // Calculer les statistiques
-  const fallbackTotalSavings = Array.isArray(_savingsAccounts)
-    ? _savingsAccounts.reduce((sum: number, account: any) => sum + (Number(account?.balance) || 0), 0)
-    : 0;
-  const fallbackProjectSavings = Array.isArray(_projects)
-    ? _projects.reduce((sum: number, project: any) => sum + (Number(project?.currentSavings) || 0), 0)
-    : 0;
-  const fallbackFreeSavings = Math.max(0, fallbackTotalSavings - fallbackProjectSavings);
-
   const currentMonth = evolutionData[evolutionData.length - 1];
   const previousMonth = evolutionData[evolutionData.length - 2];
   const totalEvolution = currentMonth && previousMonth 
@@ -369,11 +474,17 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
                     width={110}
                     tickFormatter={(value) => formatCurrency(value)}
                   />
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                  <Tooltip
                     labelFormatter={(label) => formatMonth(label)}
+                    formatter={(value: number, name: string, props: any) => {
+                      if (name === 'Épargne totale') {
+                        return [formatCurrency(props.payload.totalSavings), name];
+                      }
+                      return [formatCurrency(value), name];
+                    }}
+                    contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(5px)' }}
                   />
-                  <Legend />
+                  <Legend formatter={(value, entry) => <span style={{ color: entry.color }}>{value}</span>} />
                   
                   {/* Épargne libre en bas */}
                   <Area
@@ -400,11 +511,11 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
                   {/* Ligne du solde des comptes d'épargne */}
                   <Line
                     type="monotone"
-                    dataKey="savingsAccounts"
+                    dataKey="totalSavings"
                     stroke="#f59e0b"
                     strokeWidth={2}
                     strokeDasharray="5 5"
-                    dot={{ fill: "#f59e0b", r: 4 }}
+                    dot={false}
                     name="Solde comptes épargne"
                   />
                 </AreaChart>

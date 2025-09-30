@@ -360,6 +360,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
 
         // Calculate total spent (expenses) for the month: negative amounts excluding provisions and savings categories
         let totalMonthlyProjectSpent = 0;
+        const projectSpentBreakdown = {};
         try {
           const excludeSavingsFilter = (catIdVirements || catIdEpargne)
             ? `AND (c.ID IS NULL OR c.ID NOT IN ('${String(catIdVirements || '').replace(/'/g, "''")}', '${String(catIdEpargne || '').replace(/'/g, "''")}'))`
@@ -373,6 +374,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
             WHERE 
               t.account IN (${accountFilter})
               AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND CAST(s.amount AS REAL) < 0
               AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
               and s.project IS NOT NULL
               ${excludeSavingsFilter}
@@ -382,12 +384,46 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
           if (totalMonthlyProjectSpentResult && totalMonthlyProjectSpentResult[0] && totalMonthlyProjectSpentResult[0].values && totalMonthlyProjectSpentResult[0].values[0]) {
             totalMonthlyProjectSpent = Number(totalMonthlyProjectSpentResult[0].values[0][0]) || 0;
           }
+
+          const spentBreakdownQuery = `
+            SELECT s.project, SUM(CAST(-s.amount AS REAL)) as spent
+            FROM ICTransactionSplit s
+            LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+            LEFT JOIN ICCategory c ON s.category = c.ID
+            WHERE 
+              s.project IS NOT NULL
+              AND s.project != ''
+              AND t.account IN (${accountFilter})
+              AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND CAST(s.amount AS REAL) < 0
+              AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
+              ${excludeSavingsFilter}
+            GROUP BY s.project
+            HAVING spent > 0
+          `;
+
+          const spentBreakdownResult = db.exec(spentBreakdownQuery);
+          if (spentBreakdownResult && spentBreakdownResult[0] && spentBreakdownResult[0].values) {
+            for (const row of spentBreakdownResult[0].values) {
+              const projectName = row[0];
+              const projectSpent = Number(row[1]) || 0;
+              if (projectSpent > 0) {
+                const projectId = projectNameToId[projectName];
+                if (projectId) {
+                  projectSpentBreakdown[projectId] = (projectSpentBreakdown[projectId] || 0) + projectSpent;
+                } else {
+                  projectSpentBreakdown[projectName] = (projectSpentBreakdown[projectName] || 0) + projectSpent;
+                }
+              }
+            }
+          }
         } catch (e) {
           console.error(`Error calculating total spent for month ${monthKey}:`, e && e.message);
         }
       
         // Calculate project breakdown from both iCompta transactions and manual allocations
-        const projectBreakdown = {};
+        const icomptaProjectBreakdown = {};
+        const manualProjectBreakdown = {};
         
         // Create a mapping from project names to IDs
         const projectNameToId = {};
@@ -417,52 +453,34 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
                 const projectId = row[0];
                 const amount = Number(row[1]) || 0;
                 if (amount > 0) {
-                  projectBreakdown[projectId] = (projectBreakdown[projectId] || 0) + amount;
+                  manualProjectBreakdown[projectId] = (manualProjectBreakdown[projectId] || 0) + amount;
                 }
               }
             }
             
             budgetDb.close();
             
-            console.log(`Month ${monthKey}: Found manual allocations for ${Object.keys(projectBreakdown).length} projects`);
+            console.log(`Month ${monthKey}: Found manual allocations for ${Object.keys(manualProjectBreakdown).length} projects`);
           } catch (e) {
             console.error(`Error fetching manual allocations for month ${monthKey}:`, e && e.message);
           }
         }
         
-        // Then, get iCompta transactions for this month (to avoid double counting, only if no manual allocations exist)
+        // Then, get iCompta transactions for this month
         if (projects.length > 0) {
-          let allProjectsQuery;
-          if (catIdVirements || catIdEpargne) {
-            // Use specific category IDs if available
-            const categoryIds = [catIdVirements, catIdEpargne].filter(Boolean);
-            const inList = categoryIds.map(id => "'" + String(id).replace(/'/g, "''") + "'").join(',');
-            allProjectsQuery = `
-              SELECT s.project, SUM(CAST(s.amount AS REAL)) as savings
-              FROM ICTransactionSplit s
-              LEFT JOIN ICTransaction t ON s."transaction" = t.ID
-              WHERE s.project IS NOT NULL 
-                AND s.project != ''
-                AND s.category IN (${inList})
-                AND strftime('%Y-%m', t.date) = '${monthKey}'
-              GROUP BY s.project
-              HAVING savings > 0
-            `;
-          } else {
-            // Fallback to name-based heuristic
-            allProjectsQuery = `
-              SELECT s.project, SUM(CAST(s.amount AS REAL)) as savings
-              FROM ICTransactionSplit s
-              LEFT JOIN ICTransaction t ON s."transaction" = t.ID
-              LEFT JOIN ICCategory c ON s.category = c.ID
-              WHERE s.project IS NOT NULL 
-                AND s.project != ''
-                AND (lower(c.name) LIKE '%virements d''épargne%' OR lower(c.name) = 'epargne')
-                AND strftime('%Y-%m', t.date) = '${monthKey}'
-              GROUP BY s.project
-              HAVING savings > 0
-            `;
-          }
+          const allProjectsQuery = `
+            SELECT s.project, SUM(CAST(s.amount AS REAL)) as savings
+            FROM ICTransactionSplit s
+            LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+            LEFT JOIN ICCategory c ON s.category = c.ID
+            WHERE s.project IS NOT NULL 
+              AND s.project != ''
+              AND CAST(s.amount AS REAL) > 0
+              AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
+            GROUP BY s.project
+            HAVING savings > 0
+          `;
           
           try {
             const allProjectsResult = db.exec(allProjectsQuery);
@@ -474,14 +492,11 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
                   // Use project ID as key instead of project name
                   const projectId = projectNameToId[projectName];
                   if (projectId) {
-                    // Only add iCompta data if no manual allocation exists for this project
-                    if (!projectBreakdown[projectId]) {
-                      projectBreakdown[projectId] = projectSavings;
-                    }
+                    icomptaProjectBreakdown[projectId] = projectSavings;
                   } else {
                     // Fallback to name if ID not found (for backward compatibility)
-                    if (!projectBreakdown[projectName]) {
-                      projectBreakdown[projectName] = projectSavings;
+                    if (!icomptaProjectBreakdown[projectName]) {
+                      icomptaProjectBreakdown[projectName] = projectSavings;
                     }
                   }
                 }
@@ -494,11 +509,24 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
 
         console.log(`Month ${monthKey}: Total Savings=${totalSavings}, Total Project Spent=${totalMonthlyProjectSpent}`);
 
+        const projectBreakdown = {};
+        Object.entries(manualProjectBreakdown).forEach(([key, value]) => {
+          projectBreakdown[key] = value;
+        });
+        Object.entries(icomptaProjectBreakdown).forEach(([key, value]) => {
+          if (projectBreakdown[key] == null) {
+            projectBreakdown[key] = value;
+          }
+        });
+
         return {
           month: monthKey,
           label: monthLabel,
           totalSavings,
           projectBreakdown,
+          icomptaProjectBreakdown,
+          manualProjectBreakdown,
+          projectSpentBreakdown,
           totalMonthlyProjectSpent,
           savingsAccountsBalance
         };
