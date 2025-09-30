@@ -62,7 +62,7 @@ export interface MonthlyData {
   month: string; // internal key YYYY-MM
   label?: string; // localized label for display (e.g., 'sept. 2024')
   savings: number;
-  spent: number;
+  totalMonthlyProjectSpent: number;
 }
 
 export interface SavingsAccount {
@@ -72,7 +72,7 @@ export interface SavingsAccount {
   type: 'livret' | 'compte_courant' | 'pel' | 'autre';
 }
 
-export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table' | 'projection-epargne';
+export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table' | 'projection-epargne' | 'savings-evolution';
 
 export interface MonthlyManualSavings {
   month: string; // YYYY-MM

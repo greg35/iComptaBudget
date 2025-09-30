@@ -41,7 +41,7 @@ export function BudgetChart({ data, projectName }: BudgetChartProps) {
               />
               <Line 
                 type="monotone" 
-                dataKey="spent" 
+                dataKey="totalMonthlyProjectSpent" 
                 stroke="#dc2626" 
                 strokeWidth={2}
                 name="Dépensé"

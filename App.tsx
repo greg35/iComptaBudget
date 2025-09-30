@@ -11,6 +11,7 @@ import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
 import { SavingsPerMonth } from "./components/SavingsPerMonth";
 import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
+import { SavingsEvolutionView } from "./components/SavingsEvolutionView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -364,8 +365,11 @@ function BudgetApp() {
     })();
     return () => { mounted = false; };
   }, [selectedProjectId]);
-    // build monthly cumulative chart data from projectTransactions and project dates
-    const buildMonthlyCumulative = (transactions: any[], project: any): MonthlyData[] => {
+    
+  // build monthly cumulative chart data from projectTransactions and project dates
+  const buildMonthlyCumulative = (transactions: any[], project: any): MonthlyData[] => {
+    console.debug('buildMonthlyCumulative called with project:', project);
+    console.debug('and transactions:', transactions);
     if (!project) return [];
     // parse transaction dates and classify savings vs expenses (projectTransactions already sets type)
     const txs = (transactions || []).map(t => ({
@@ -412,7 +416,7 @@ function BudgetApp() {
       cumSpent += m.spent;
       // label as localized short month (e.g., 'sept. 2024')
       const label = cur.toLocaleString('fr-FR', { month: 'short', year: 'numeric' });
-      out.push({ month: k, label, savings: Number(cumSavings.toFixed(2)), spent: Number(cumSpent.toFixed(2)) });
+      out.push({ month: k, label, savings: Number(cumSavings.toFixed(2)), totalMonthlyProjectSpent: Number(cumSpent.toFixed(2)) });
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
     return out;
@@ -704,6 +708,11 @@ function BudgetApp() {
               projects={projects}
               showActiveOnly={showActiveOnly}
             />
+          ) : currentView === "savings-evolution" ? (
+            <SavingsEvolutionView
+              projects={projects}
+              savingsAccounts={savingsAccounts}
+            />
           ) : currentView === "projects-table" ? (
             <ProjectsTableView
               projects={projects}
@@ -736,7 +745,7 @@ function BudgetApp() {
           )}
         </main>
       </div>
-      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne') && (
+      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne' || currentView === 'savings-evolution') && (
         <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
       )}
       <Toaster />

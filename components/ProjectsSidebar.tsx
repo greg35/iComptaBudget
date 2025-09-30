@@ -53,7 +53,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           <h2 className="text-lg font-semibold">iCompta Budget</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Actifs seulement</span>
-            <Switch checked={showActiveOnly} onCheckedChange={(v) => onShowActiveOnlyChange(Boolean(v))} />
+            <Switch checked={showActiveOnly} onCheckedChange={(v: boolean) => onShowActiveOnlyChange(Boolean(v))} />
           </div>
         </div>
       </SidebarHeader>
@@ -108,6 +108,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <BarChart3 className="h-4 w-4" />
               <span>Projection Épargne</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('savings-evolution')}
+              isActive={currentView === 'savings-evolution'}
+              className="w-full"
+            >
+              <TrendingUp className="h-4 w-4" />
+              <span>Évolution épargne</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

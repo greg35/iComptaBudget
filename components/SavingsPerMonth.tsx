@@ -4,7 +4,7 @@ import { Project, ProjectSavingGoal, ProjectAllocation } from '../types/budget';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil, Loader2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil, Loader2, ArrowDownToLine } from 'lucide-react';
 
 interface SavingsPerMonthProps {
   projects?: Project[];
@@ -128,6 +128,7 @@ const InlineAmountEditor: React.FC<InlineAmountEditorProps> = ({
 interface CurrentMonthData {
   month: string;
   totalSavings: number;
+  totalMonthlyProjectSpent?: number;
   projectBreakdown: { [projectName: string]: number };
   targetBreakdown: { [projectName: string]: number };
 }
@@ -151,6 +152,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
 
   // États pour la gestion des allocations (simplifié)
   const [allocations, setAllocations] = useState<{ [key: string]: ProjectAllocation }>({});
+  const [autoFillLoading, setAutoFillLoading] = useState<string | null>(null);
 
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
@@ -205,7 +207,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   // Fonction pour sauvegarder une allocation avec le nouveau composant
   const saveAllocationInline = async (projectId: string, amount: number) => {
     try {
-  const response = await apiFetch(`/api/project-allocations/${monthKey}`, {
+      const response = await apiFetch(`/api/project-allocations/${monthKey}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -239,7 +241,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   // Fonction pour charger les allocations existantes
   const loadAllocations = async () => {
     try {
-  const response = await apiFetch(`/api/project-allocations/${monthKey}`);
+      const response = await apiFetch(`/api/project-allocations/${monthKey}`);
       if (response.ok) {
         const allocationsArray = await response.json();
         const allocationsMap: { [key: string]: ProjectAllocation } = {};
@@ -258,12 +260,24 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
     }
   };
 
+  const handleFillWithTarget = async (projectId: string, monthlyTarget: number) => {
+    setAutoFillLoading(projectId);
+    try {
+      await saveAllocationInline(projectId, monthlyTarget);
+    } catch (error) {
+      console.error("Erreur lors du remplissage automatique de l'épargne:", error);
+    } finally {
+      setAutoFillLoading(null);
+    }
+  };
+
   const fetchCurrentMonthData = async () => {
     try {
       setLoading(true);
       
       // Récupérer le montant épargné total du mois ET la répartition par projet depuis monthly-savings
       let totalMonthlySavings = 0;
+      let totalMonthlyProjectSpent = 0;
       let projectBreakdown: { [projectName: string]: number } = {};
       
       try {
@@ -283,6 +297,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
           console.log('Found current month entry:', currentMonthEntry);
           if (currentMonthEntry) {
             totalMonthlySavings = currentMonthEntry.totalSavings || 0;
+            totalMonthlyProjectSpent = currentMonthEntry.totalMonthlyProjectSpent || 0;
             projectBreakdown = currentMonthEntry.projectBreakdown || {};
           }
           console.log('totalMonthlySavings set to:', totalMonthlySavings);
@@ -306,6 +321,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       setCurrentMonthData({
         month: monthKey,
         totalSavings: totalMonthlySavings, // Montant épargné total du mois (depuis iCompta)
+        totalMonthlyProjectSpent: totalMonthlyProjectSpent,
         projectBreakdown, // Répartition par projet (depuis iCompta)
         targetBreakdown: {}
       });
@@ -315,6 +331,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       setCurrentMonthData({
         month: monthKey,
         totalSavings: 0,
+        totalMonthlyProjectSpent: 0,
         projectBreakdown: {},
         targetBreakdown: {}
       });
@@ -416,7 +433,8 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
     
     // Priorité à l'allocation manuelle si elle existe (> 0), sinon utiliser iCompta
     const currentSavings = allocatedAmount > 0 ? allocatedAmount : icomptaAmount;
-
+    const currentSpent = project.currentSpent || 0;
+    
     const difference = currentSavings - monthlyTarget;
     const isTargetMet = difference >= 0;
 
@@ -425,6 +443,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       projectName: project.name,
       monthlyTarget,
       currentSavings,
+      currentSpent,
       difference,
       isTargetMet
     };
@@ -438,7 +457,9 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   
   // 2. projectSavings = Montant affecté aux projets (depuis savings-amounts)
   const projectSavings = projectTargets.reduce((sum, target) => sum + target.currentSavings, 0);
-  
+  const projectSpent = projectTargets.reduce((sum, target) => sum + target.currentSpent, 0);
+  const totalMonthlyProjectSpent = currentMonthData?.totalMonthlyProjectSpent || 0;
+
   const totalDifference = totalMonthlySavings - projectSavings;
   const overallTargetMet = totalDifference >= 0;
 
@@ -577,13 +598,28 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
                     <td className="px-4 py-3 font-medium">{target.projectName}</td>
                     <td className="px-6 py-3 text-left">{formatCurrency(target.monthlyTarget)}</td>
                     <td className="px-6 py-3">
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-2">
                         <InlineAmountEditor
                           value={target.currentSavings}
                           onSave={(amount) => saveAllocationInline(target.projectId, amount)}
                           formatValue={(value) => formatCurrency(value)}
                           className="text-right"
                         />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleFillWithTarget(target.projectId, target.monthlyTarget)}
+                          disabled={autoFillLoading === target.projectId}
+                          title="Renseigner l'épargne réalisée avec l'objectif mensuel"
+                          aria-label="Renseigner l'épargne réalisée avec l'objectif mensuel"
+                        >
+                          {autoFillLoading === target.projectId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ArrowDownToLine className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </td>
                     <td className={`px-6 py-3 text-right font-medium ${
@@ -627,6 +663,23 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
                 </tr>
               </tfoot>
             </table>
+          </div>
+
+          <div className="home-cols-4">
+            <div>
+              <Card>
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Provision à prévoir</CardTitle>
+                  <Euro className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl flex items-center gap-2">
+                    {formatCurrency(totalMonthlyProjectSpent)}
+                  </div>
+                  {/* <p className="text-xs text-muted-foreground">{(projectSpent/totalMonthlySavings*100).toFixed(1)}% attribué au fond d'urgence</p> */}
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {projectTargets.length === 0 && (

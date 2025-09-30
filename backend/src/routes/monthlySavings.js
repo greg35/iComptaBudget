@@ -11,6 +11,9 @@ router.get('/', async (req, res) => {
   try {
     const months = parseInt(req.query.months) || 6;
     const targetMonth = req.query.targetMonth; // Format: YYYY-MM
+    const allHistory = req.query.all === 'true';
+    const startMonthParam = req.query.startMonth;
+    const endMonthParam = req.query.endMonth;
     //console.log('Monthly savings calculation requested for', months, 'months', targetMonth ? `targeting ${targetMonth}` : '');
     
     if (!fs.existsSync(config.DB_PATH)) {
@@ -23,12 +26,13 @@ router.get('/', async (req, res) => {
     ////////////////////////////////////////////////////////////////////////////////////////
     // Get accounts that are included in checking (expense) calculations
     let includedAccountIds = [];
+    let savingsAccountIds = [];
     if (fs.existsSync(config.DATA_DB_PATH)) {
       try {
         const SQL = await initSqlJs();
         const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
         const prefsDb = new SQL.Database(filebuffer);
-        
+
         // Get accounts included in checking/expenses
         const prefsResult = prefsDb.exec(`
           SELECT accountId FROM account_preferences 
@@ -36,6 +40,15 @@ router.get('/', async (req, res) => {
         `);
         if (prefsResult && prefsResult[0]) {
           includedAccountIds = prefsResult[0].values.map(row => row[0]);
+        }
+
+        // Get accounts explicitly marked as savings
+        const savingsResult = prefsDb.exec(`
+          SELECT accountId FROM account_preferences 
+          WHERE includeSavings = 1
+        `);
+        if (savingsResult && savingsResult[0]) {
+          savingsAccountIds = savingsResult[0].values.map(row => row[0]);
         }
         prefsDb.close();
         //console.log('Found', includedAccountIds.length, 'accounts included in checking:', includedAccountIds);
@@ -55,6 +68,34 @@ router.get('/', async (req, res) => {
     ////
     ////////////////////////////////////////////////////////////////////////////////////////
     const db = await openDb(config.DB_PATH);
+
+    const monthKeyFromDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const parseMonthKey = (monthKey) => {
+      if (!/^\d{4}-\d{2}$/.test(monthKey)) return null;
+      const [y, m] = monthKey.split('-').map(Number);
+      return new Date(y, m - 1, 1);
+    };
+
+    const today = new Date();
+    const todayMonthKey = monthKeyFromDate(today);
+
+    // Fallback to any savings-like accounts if none flagged explicitly
+    if (savingsAccountIds.length === 0) {
+      try {
+        const fallbackQuery = `
+          SELECT ID FROM ICAccount
+          WHERE hidden = 0 
+            AND "type" IS NOT NULL
+            AND lower("type") LIKE '%savings%'
+        `;
+        const fallbackRes = db.exec(fallbackQuery);
+        if (fallbackRes && fallbackRes[0]) {
+          savingsAccountIds = fallbackRes[0].values.map(row => row[0]);
+        }
+      } catch (e) {
+        console.warn('Could not determine savings accounts fallback:', e && e.message);
+      }
+    }
     
     // Detect category ids for savings-related categories (like in projects.js)
     const findCategoryId = (db, name) => {
@@ -66,6 +107,7 @@ router.get('/', async (req, res) => {
       }
     };
     
+    //TODO : make these configurable in data DB by presenting the categories in the settings et letting user choose
     const catIdVirements = "49441D5E-A4A8-4478-8291-440ECBFBA78F"; // findCategoryId(db, "Virements d'épargne");
     const catIdEpargne = "D9968331-C6F0-4A9E-9A67-74C1D0B59E01"; // findCategoryId(db, "Epargne");
     console.log('Savings category IDs (hardcoded):', { catIdVirements, catIdEpargne });
@@ -95,6 +137,62 @@ router.get('/', async (req, res) => {
     }
     
     const monthlyData = [];
+
+    async function inferEarliestMonth() {
+      let earliest = null;
+      const updateEarliest = (value) => {
+        if (!value) return;
+        const key = String(value).slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(key)) return;
+        if (!earliest || key < earliest) {
+          earliest = key;
+        }
+      };
+
+      if (includedAccountIds.length > 0) {
+        try {
+          const filter = includedAccountIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+          const res = db.exec(`SELECT MIN(date) as minDate FROM ICTransaction WHERE account IN (${filter})`);
+          const val = res && res[0] && res[0].values && res[0].values[0] ? res[0].values[0][0] : null;
+          updateEarliest(val);
+        } catch (e) {
+          console.warn('Failed inferring earliest month from ICTransaction:', e && e.message);
+        }
+      }
+
+      if (savingsAccountIds.length > 0) {
+        try {
+          const filter = savingsAccountIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+          const res = db.exec(`SELECT MIN(date) as minDate FROM ICTransaction WHERE account IN (${filter})`);
+          const val = res && res[0] && res[0].values && res[0].values[0] ? res[0].values[0][0] : null;
+          updateEarliest(val);
+        } catch (e) {
+          console.warn('Failed inferring earliest month from savings accounts:', e && e.message);
+        }
+      }
+
+      if (fs.existsSync(config.DATA_DB_PATH)) {
+        try {
+          const SQL = await initSqlJs();
+          const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
+          const dataDb = new SQL.Database(filebuffer);
+
+          const allocationsRes = dataDb.exec(`SELECT MIN(month) FROM project_allocations WHERE allocatedAmount > 0`);
+          const allocationsMin = allocationsRes && allocationsRes[0] && allocationsRes[0].values && allocationsRes[0].values[0] ? allocationsRes[0].values[0][0] : null;
+          updateEarliest(allocationsMin);
+
+          const manualSavingsRes = dataDb.exec(`SELECT MIN(date) FROM transactions WHERE type='income'`);
+          const manualMin = manualSavingsRes && manualSavingsRes[0] && manualSavingsRes[0].values && manualSavingsRes[0].values[0] ? manualSavingsRes[0].values[0][0] : null;
+          updateEarliest(manualMin);
+
+          dataDb.close();
+        } catch (e) {
+          console.warn('Failed inferring earliest month from data DB:', e && e.message);
+        }
+      }
+
+      return earliest || todayMonthKey;
+    }
     
     try {
       // Si un mois spécifique est demandé, calculer seulement celui-ci
@@ -106,9 +204,43 @@ router.get('/', async (req, res) => {
         
         console.log(`Processing specific month: ${monthKey} (${monthLabel})`);
         
-        const monthData = await calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne);
+        const monthData = await calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne, savingsAccountIds);
         if (monthData) {
           monthlyData.push(monthData);
+        }
+      } else if (allHistory || startMonthParam) {
+        let startKey = startMonthParam;
+        if (allHistory || !startKey) {
+          const inferred = await inferEarliestMonth();
+          if (!startKey || (inferred && inferred < startKey)) {
+            startKey = inferred;
+          }
+        }
+
+        if (!startKey || !/^\d{4}-\d{2}$/.test(startKey)) {
+          return res.status(400).json({ error: 'Invalid or missing start month for history mode' });
+        }
+
+        const endKey = endMonthParam && /^\d{4}-\d{2}$/.test(endMonthParam) ? endMonthParam : todayMonthKey;
+        const startDate = parseMonthKey(startKey);
+        const endDate = parseMonthKey(endKey);
+        if (!startDate || !endDate) {
+          return res.status(400).json({ error: 'Invalid month format' });
+        }
+        if (startDate.getTime() > endDate.getTime()) {
+          console.warn('Start month is after end month, returning empty history');
+        } else {
+          let iter = new Date(startDate.getTime());
+          while (iter.getTime() <= endDate.getTime()) {
+            const monthKey = monthKeyFromDate(iter);
+            const monthLabel = iter.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+            console.log(`Processing month: ${monthKey} (${monthLabel}) [history]`);
+            const monthData = await calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne, savingsAccountIds);
+            if (monthData) {
+              monthlyData.push(monthData);
+            }
+            iter = new Date(iter.getFullYear(), iter.getMonth() + 1, 1);
+          }
         }
       } else {
         // Calculer pour plusieurs mois (comportement original)
@@ -136,7 +268,7 @@ router.get('/', async (req, res) => {
           
           console.log(`Processing month: ${monthKey} (${monthLabel})`);
           
-          const monthData = await calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne);
+          const monthData = await calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne, savingsAccountIds);
           if (monthData) {
             monthlyData.push(monthData);
           }
@@ -165,10 +297,14 @@ router.get('/', async (req, res) => {
 });
 
 // Fonction helper pour calculer les données d'un mois
-async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne) {
+async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, projects, catIdVirements, catIdEpargne, savingsAccountIds) {
   try {
         // Get transactions for this month from included accounts
         const accountFilter = includedAccountIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+        const savingsFilter = (savingsAccountIds || []).map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+        const [year, month] = monthKey.split('-').map(Number);
+        const monthEnd = new Date(year, month, 0);
+        const monthEndStr = `${year}-${String(month).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
         
         // Calculate total savings for the month (existing logic)
         const totalQuery = `
@@ -197,9 +333,57 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
         
         const totalResult = db.exec(totalQuery);
         let totalSavings = 0;
-        
+
         if (totalResult && totalResult[0] && totalResult[0].values && totalResult[0].values[0]) {
           totalSavings = Number(totalResult[0].values[0][0]) || 0;
+        }
+
+        // Calculate cumulative balance of savings accounts up to end of month
+        let savingsAccountsBalance = 0;
+        if (savingsFilter) {
+          const savingsBalanceQuery = `
+            SELECT SUM(CAST(s.amount AS REAL)) as balance
+            FROM ICTransactionSplit s
+            LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+            WHERE t.account IN (${savingsFilter})
+              AND date(t.date) <= date('${monthEndStr}')
+          `;
+          try {
+            const savingsResult = db.exec(savingsBalanceQuery);
+            if (savingsResult && savingsResult[0] && savingsResult[0].values && savingsResult[0].values[0]) {
+              savingsAccountsBalance = Number(savingsResult[0].values[0][0]) || 0;
+            }
+          } catch (e) {
+            console.error(`Error calculating savings balance for month ${monthKey}:`, e && e.message);
+          }
+        }
+
+        // Calculate total spent (expenses) for the month: negative amounts excluding provisions and savings categories
+        let totalMonthlyProjectSpent = 0;
+        try {
+          const excludeSavingsFilter = (catIdVirements || catIdEpargne)
+            ? `AND (c.ID IS NULL OR c.ID NOT IN ('${String(catIdVirements || '').replace(/'/g, "''")}', '${String(catIdEpargne || '').replace(/'/g, "''")}'))`
+            : `AND (c.name IS NULL OR (lower(c.name) NOT LIKE '%virements%' AND lower(c.name) NOT LIKE '%epargne%'))`;
+          const spentQuery = `
+            SELECT SUM(CAST(-s.amount AS REAL)) as spent
+            FROM ICTransactionSplit s
+            LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+            LEFT JOIN ICAccount a ON t.account = a.ID
+            LEFT JOIN ICCategory c ON s.category = c.ID
+            WHERE 
+              t.account IN (${accountFilter})
+              AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
+              and s.project IS NOT NULL
+              ${excludeSavingsFilter}
+          `;
+          console.log('Executing spent query for', monthKey);
+          const totalMonthlyProjectSpentResult = db.exec(spentQuery);
+          if (totalMonthlyProjectSpentResult && totalMonthlyProjectSpentResult[0] && totalMonthlyProjectSpentResult[0].values && totalMonthlyProjectSpentResult[0].values[0]) {
+            totalMonthlyProjectSpent = Number(totalMonthlyProjectSpentResult[0].values[0][0]) || 0;
+          }
+        } catch (e) {
+          console.error(`Error calculating total spent for month ${monthKey}:`, e && e.message);
         }
       
         // Calculate project breakdown from both iCompta transactions and manual allocations
@@ -307,14 +491,16 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
             console.error(`Error calculating project savings for month ${monthKey}:`, e && e.message);
           }
         }
-        
-        console.log(`Month ${monthKey}: Total=${totalSavings}, Projects breakdown from iCompta:`, Object.keys(projectBreakdown).length, 'projects with savings');
-        
+
+        console.log(`Month ${monthKey}: Total Savings=${totalSavings}, Total Project Spent=${totalMonthlyProjectSpent}`);
+
         return {
           month: monthKey,
           label: monthLabel,
           totalSavings,
-          projectBreakdown
+          projectBreakdown,
+          totalMonthlyProjectSpent,
+          savingsAccountsBalance
         };
   } catch (e) {
     console.error(`Error calculating data for month ${monthKey}:`, e && e.message);
