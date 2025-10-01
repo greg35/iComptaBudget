@@ -5,6 +5,13 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.8.0] - 2025-10-01
+
+### Corrigé
+- Correction bugs divers
+
+### Ajouté
+- Evolution du solde d'épargne
 
 ## [1.7.1] - 2025-09-09
 
