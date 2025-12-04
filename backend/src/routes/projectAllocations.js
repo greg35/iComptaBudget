@@ -75,9 +75,9 @@ router.put('/:month', async (req, res) => {
 
       // Insert new allocations and create transactions
       for (const allocation of allocations) {
-        if (allocation.amount > 0) {
-          // Insert allocation
-          const allocationId = uuidv4();        
+        if (allocation.amount !== 0) {
+          // Insert allocation (permettre les valeurs négatives)
+          const allocationId = uuidv4();
           // Check if allocation exists for the same month and projectId
           const existing = db.exec(
             `SELECT id FROM project_allocations WHERE month = ? AND projectId = ?`,
@@ -98,19 +98,19 @@ router.put('/:month', async (req, res) => {
               [allocationId, month, allocation.projectId, allocation.amount]
             );
           }
-          
+
           // Get project name
           const projectQuery = db.exec('SELECT name FROM projects WHERE id = ?', [allocation.projectId]);
-          const projectName = projectQuery && projectQuery[0] && projectQuery[0].values[0] ? 
+          const projectName = projectQuery && projectQuery[0] && projectQuery[0].values[0] ?
                               projectQuery[0].values[0][0] : 'Projet inconnu';
-          
+
           // Create transaction for this allocation
           await createAllocationTransaction(db, month, allocation.amount, projectName, allocation.projectId);
         }
         else {
-          // Delete allocation if amount is less than or equal to 0
+          // Delete allocation if amount is 0
           const deleteQuery = `
-            DELETE FROM project_allocations WHERE 
+            DELETE FROM project_allocations WHERE
             month = ?
             AND projectId = ?`;
           console.log('Executing query:', deleteQuery, 'with params:', [month, allocation.projectId]);

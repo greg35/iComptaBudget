@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from "react-router-dom";
 import { Project, Transaction, MonthlyData, SavingsAccount, ViewType } from "./types/budget";
 import { ProjectsSidebar } from "./components/ProjectsSidebar";
 import { ProjectHeader } from "./components/ProjectHeader";
@@ -12,11 +13,13 @@ import { MonthlySavingsView } from "./components/MonthlySavingsView";
 import { SavingsPerMonth } from "./components/SavingsPerMonth";
 import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
 import { SavingsEvolutionView } from "./components/SavingsEvolutionView";
+import { CategoryMatrixView } from "./components/CategoryMatrixView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { ProjectsTableView } from "./components/ProjectsTableView";
+import { AllTransactionsView } from "./components/AllTransactionsView";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { LoginForm } from "./components/LoginForm";
 import { toast } from "sonner";
@@ -122,8 +125,46 @@ function AuthView() {
 
 // Composant principal du budget (après authentification)
 function BudgetApp() {
-  const [currentView, setCurrentView] = useState<ViewType>("home");
-  const [selectedProjectId, setSelectedProjectId] = useState(null as string | null);
+  return (
+    <Routes>
+      <Route path="/" element={<BudgetAppContent />} />
+      <Route path="/home" element={<BudgetAppContent />} />
+      <Route path="/settings" element={<BudgetAppContent />} />
+      <Route path="/monthly-savings" element={<BudgetAppContent />} />
+      <Route path="/month-breakdown" element={<BudgetAppContent />} />
+      <Route path="/projection-epargne" element={<BudgetAppContent />} />
+      <Route path="/savings-evolution" element={<BudgetAppContent />} />
+      <Route path="/category-matrix" element={<BudgetAppContent />} />
+      <Route path="/projects-table" element={<BudgetAppContent />} />
+      <Route path="/transactions" element={<BudgetAppContent />} />
+      <Route path="/project/:projectId" element={<BudgetAppContent />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+// Composant avec la logique métier (extrait l'état de l'URL)
+function BudgetAppContent() {
+  const navigate = useNavigate();
+  const { projectId } = useParams();
+  const location = window.location.pathname;
+
+  // Détermine la vue actuelle depuis l'URL
+  const currentView: ViewType =
+    location === "/" || location === "/home" ? "home" :
+      location === "/settings" ? "settings" :
+        location === "/monthly-savings" ? "monthly-savings" :
+          location === "/month-breakdown" ? "month-breakdown" :
+            location === "/projection-epargne" ? "projection-epargne" :
+              location === "/savings-evolution" ? "savings-evolution" :
+                location === "/category-matrix" ? "category-matrix" :
+                  location === "/projects-table" ? "projects-table" :
+                    location === "/transactions" ? "transactions-list" :
+                      location.startsWith("/project/") ? "project" :
+                        "home";
+
+  const selectedProjectId = projectId || null;
+
   const [projects, setProjects] = useState([] as Project[]);
   const [loadingProjects, setLoadingProjects] = useState(false as boolean);
   const [showActiveOnly, setShowActiveOnly] = useState(true);
@@ -139,7 +180,7 @@ function BudgetApp() {
         // Use the dedicated first startup detection endpoint
         const res = await fetch('/api/first-startup');
         if (!mounted) return;
-        
+
         if (res.ok) {
           const data = await res.json();
           console.log('First startup check:', data);
@@ -166,7 +207,7 @@ function BudgetApp() {
       const res = await apiFetch('/api/projects');
       if (!res.ok) throw new Error('Failed to fetch projects');
       const data = await res.json();
-      
+
       // Charger les objectifs d'épargne et les allocations pour tous les projets
       const projectsWithTargets = await Promise.all((data || []).map(async (p: any) => {
         const normalized: Project = {
@@ -190,7 +231,7 @@ function BudgetApp() {
             const activeGoal = goals
               .filter((goal: any) => !goal.endDate || new Date(goal.endDate) >= new Date())
               .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-            
+
             if (activeGoal) {
               normalized.monthlySavingsTarget = Number(activeGoal.amount) || 0;
             }
@@ -204,9 +245,6 @@ function BudgetApp() {
       }));
 
       setProjects(projectsWithTargets);
-      if (!selectedProjectId && projectsWithTargets && projectsWithTargets.length > 0) {
-        setSelectedProjectId(String(projectsWithTargets[0].id));
-      }
     } catch (e) {
       console.error('Could not load projects:', e);
     } finally {
@@ -226,7 +264,7 @@ function BudgetApp() {
 
       // Calculer currentSavings avec allocations manuelles
       let currentSavings = Number(projectData.currentSavings ?? 0) || 0;
-      
+
       try {
         const transactionsRes = await apiFetch(`/api/transactions?project=${projectId}`);
         if (transactionsRes.ok) {
@@ -234,8 +272,8 @@ function BudgetApp() {
           // Filtrer uniquement les transactions d'allocation créées par notre système
           // (description commence par "VIR Epargne" ET isManual = true)
           const manualAllocations = transactions
-            .filter((t: any) => 
-              t.type === 'income' && 
+            .filter((t: any) =>
+              t.type === 'income' &&
               t.category === "Virements d'épargne" &&
               t.description && t.description.startsWith('VIR Epargne') &&
               t.isManual === true // Exclure les vraies transactions iCompta déjà comptées
@@ -248,7 +286,7 @@ function BudgetApp() {
       }
 
       // Mettre à jour le projet dans l'état local
-      setProjects(prev => prev.map(p => 
+      setProjects(prev => prev.map(p =>
         p.id === projectId ? { ...p, currentSavings } : p
       ));
     } catch (e) {
@@ -261,7 +299,7 @@ function BudgetApp() {
     let mounted = true;
     // Only fetch projects if it's not first startup
     if (isFirstStartup === true) return;
-    
+
     (async () => {
       if (mounted) {
         await loadProjects();
@@ -279,7 +317,7 @@ function BudgetApp() {
     let mounted = true;
     // Only load settings if it's not first startup
     if (isFirstStartup === true) return;
-    
+
     (async () => {
       try {
         const res = await apiFetch('/api/settings');
@@ -302,7 +340,7 @@ function BudgetApp() {
     let mounted = true;
     // Only load savings accounts if it's not first startup
     if (isFirstStartup === true) return;
-    
+
     (async () => {
       try {
         const res = await apiFetch('/api/accounts?filterType=savings');
@@ -331,11 +369,11 @@ function BudgetApp() {
       setProjectTransactions([]);
       return;
     }
-  const currentProject = projects.find(p => p.id === selectedProjectId);
-  // Use the DB project key (dbProject) when available — this matches ICTransactionSplit.project values
-  // Fallback to the project id when dbProject is not set.
-  //const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
-  const projectKey = selectedProjectId;
+    const currentProject = projects.find(p => p.id === selectedProjectId);
+    // Use the DB project key (dbProject) when available — this matches ICTransactionSplit.project values
+    // Fallback to the project id when dbProject is not set.
+    //const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
+    const projectKey = selectedProjectId;
     (async () => {
       try {
         const res = await apiFetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
@@ -357,7 +395,7 @@ function BudgetApp() {
           type: t.type || (((t.category || '') === 'Virements d\'épargne' || (t.category || '') === "Virements d'épargne") ? 'income' : 'expense'),
           category: t.category || ''
         }));
-        setProjectTransactions(filtered);        
+        setProjectTransactions(filtered);
       } catch (e: any) {
         console.error('could not load project transactions', e);
         setProjectTransactions([]);
@@ -365,7 +403,7 @@ function BudgetApp() {
     })();
     return () => { mounted = false; };
   }, [selectedProjectId]);
-    
+
   // build monthly cumulative chart data from projectTransactions and project dates
   const buildMonthlyCumulative = (transactions: any[], project: any): MonthlyData[] => {
     console.debug('buildMonthlyCumulative called with project:', project);
@@ -391,7 +429,7 @@ function BudgetApp() {
     const start = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
-    const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
     // monthly sums (not cumulative yet)
     const monthly = new Map();
@@ -430,12 +468,24 @@ function BudgetApp() {
   };
 
   const handleViewChange = (view: ViewType) => {
-    setCurrentView(view);
+    // Navigation basée sur la vue
+    const routes: Record<ViewType, string> = {
+      home: "/home",
+      settings: "/settings",
+      "monthly-savings": "/monthly-savings",
+      "month-breakdown": "/month-breakdown",
+      "projection-epargne": "/projection-epargne",
+      "savings-evolution": "/savings-evolution",
+      "category-matrix": "/category-matrix",
+      "projects-table": "/projects-table",
+      "transactions-list": "/transactions",
+      project: "/home", // Fallback, normalement on utilise handleProjectSelect
+    };
+    navigate(routes[view] || "/home");
   };
 
   const handleProjectSelect = (projectId: string) => {
-    setSelectedProjectId(projectId);
-    setCurrentView("project");
+    navigate(`/project/${projectId}`);
   };
 
   const handleCreateProject = (projectData: Omit<Project, 'id' | 'currentSavings' | 'currentSpent'>) => {
@@ -447,7 +497,7 @@ function BudgetApp() {
           endDate: projectData.endDate || null,
           plannedBudget: Number(projectData.plannedBudget || 0) || 0
         };
-          const res = await apiFetch('/api/projects', {
+        const res = await apiFetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
@@ -458,7 +508,7 @@ function BudgetApp() {
         let normalizedProject: Project;
         if (proj) {
           normalizedProject = {
-            id: String(proj.id ?? Math.random().toString(36).substr(2,9)),
+            id: String(proj.id ?? Math.random().toString(36).substr(2, 9)),
             name: proj.name || projectData.name,
             startDate: proj.startDate || projectData.startDate || '',
             endDate: proj.endDate || projectData.endDate || '',
@@ -481,7 +531,7 @@ function BudgetApp() {
           } as Project;
         }
         setProjects(prev => [...prev, normalizedProject]);
-        setSelectedProjectId(normalizedProject.id);
+        navigate(`/project/${normalizedProject.id}`);
         toast.success(`Projet "${normalizedProject.name}" créé et sauvegardé.`);
       } catch (e: any) {
         console.error('failed to create project on server', e);
@@ -495,10 +545,10 @@ function BudgetApp() {
     if (!project) return;
 
     const newArchivedState = !project.archived;
-    
+
     try {
       // Call backend to update archived state
-  const response = await apiFetch(`/api/projects/${projectId}`, {
+      const response = await apiFetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -512,26 +562,25 @@ function BudgetApp() {
       }
 
       const result = await response.json();
-      
+
       // Update local state with the response from server
       setProjects((prev) =>
         prev.map((p) =>
-          p.id === projectId 
-            ? { ...p, archived: result.project?.archived ?? newArchivedState } 
+          p.id === projectId
+            ? { ...p, archived: result.project?.archived ?? newArchivedState }
             : p
         )
       );
 
       toast.success(
-        newArchivedState 
+        newArchivedState
           ? `Projet "${project.name}" archivé avec succès !`
           : `Projet "${project.name}" désarchivé avec succès !`
       );
 
       // Si le projet archivé était sélectionné, retourner à l'accueil
       if (newArchivedState && selectedProjectId === projectId) {
-        setCurrentView("home");
-        setSelectedProjectId(null);
+        navigate("/home");
       }
     } catch (error) {
       console.error('Failed to update project archived state:', error);
@@ -545,7 +594,7 @@ function BudgetApp() {
 
     try {
       // Call backend to delete project
-  const response = await apiFetch(`/api/projects/${projectId}`, {
+      const response = await apiFetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -558,16 +607,15 @@ function BudgetApp() {
       }
 
       const result = await response.json();
-      
+
       // Update local state - remove the project
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      
+
       toast.success(`Projet "${project.name}" supprimé avec succès !`);
 
       // Si le projet supprimé était sélectionné, retourner à l'accueil
       if (selectedProjectId === projectId) {
-        setCurrentView("home");
-        setSelectedProjectId(null);
+        navigate("/home");
       }
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -612,8 +660,8 @@ function BudgetApp() {
       try {
         const currentDate = new Date();
         const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
-        
-  const response = await apiFetch('/api/saving-goals', {
+
+        const response = await apiFetch('/api/saving-goals', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -668,97 +716,107 @@ function BudgetApp() {
   return (
     <SidebarProvider>
       <ErrorBoundary>
-      <div className="min-h-screen flex w-full">
-        <ProjectsSidebar
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          currentView={currentView}
-          showActiveOnly={showActiveOnly}
-          onProjectSelect={handleProjectSelect}
-          onViewChange={handleViewChange}
-          onCreateProject={handleCreateProject}
-          onShowActiveOnlyChange={setShowActiveOnly}
-          onUpdateAccounts={handleUpdateAccounts}
-          isUpdatingAccounts={isUpdatingAccounts}
-        />
-        
-  <main className={`flex-1 p-6 space-y-6 flex flex-col ${ (currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown') ? 'pb-28' : '' }`}>
-          {currentView === "home" ? (
-            <HomeView
-              projects={projects}
-              savingsAccounts={savingsAccounts}
-            />
-          ) : currentView === "settings" ? (
-            <SettingsView
-              dropboxUrl={dropboxUrl}
-              onUpdateDropboxUrl={handleUpdateDropboxUrl}
-            />
-          ) : currentView === "monthly-savings" ? (
-            <MonthlySavingsView
-              projects={projects}
-              showActiveOnly={showActiveOnly}
-            />
-          ) : currentView === "month-breakdown" ? (
-            <SavingsPerMonth
-              projects={projects}
-              showActiveOnly={showActiveOnly}
-            />
-          ) : currentView === "projection-epargne" ? (
-            <GoalSavingsProjectionView
-              projects={projects}
-              showActiveOnly={showActiveOnly}
-            />
-          ) : currentView === "savings-evolution" ? (
-            <SavingsEvolutionView
-              projects={projects}
-              savingsAccounts={savingsAccounts}
-            />
-          ) : currentView === "projects-table" ? (
-            <ProjectsTableView
-              projects={projects}
-              onUpdateProject={handleUpdateProject}
-              onProjectSelect={handleProjectSelect}
-              onViewChange={handleViewChange}
-            />
-          ): selectedProject ? (
-            <>
-              <ProjectHeader 
-                project={selectedProject} 
-                onPlannedBudgetChange={(projId, plannedBudget) => {
-                  setProjects(prev => prev.map(p => p.id === projId ? Object.assign({}, p, { plannedBudget }) : p));
-                }} 
-                onDatesChange={handleDatesChange} 
-                onArchiveProject={handleArchiveProject}
-                onDeleteProject={handleDeleteProject}
-                onNameChange={(projId, name) => {
-                  setProjects(prev => prev.map(p => p.id === projId ? Object.assign({}, p, { name }) : p));
-                }}
+        <div className="min-h-screen flex w-full">
+          <ProjectsSidebar
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            currentView={currentView}
+            showActiveOnly={showActiveOnly}
+            onProjectSelect={handleProjectSelect}
+            onViewChange={handleViewChange}
+            onCreateProject={handleCreateProject}
+            onShowActiveOnlyChange={setShowActiveOnly}
+            onUpdateAccounts={handleUpdateAccounts}
+            isUpdatingAccounts={isUpdatingAccounts}
+          />
+
+          <main className={`flex-1 p-6 space-y-6 flex flex-col ${(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'transactions-list') ? 'pb-28' : ''}`}>
+            {currentView === "home" ? (
+              <HomeView
+                projects={projects}
+                savingsAccounts={savingsAccounts}
               />
-              <ProjectSavingGoalsPanel projectId={selectedProject.id} />
-              <BudgetChart data={chartData} projectName={selectedProject.name} />
-              <TransactionsList transactions={projectTransactions} />
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Sélectionnez un projet pour voir les détails</p>
-            </div>
-          )}
-        </main>
-      </div>
-      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne' || currentView === 'savings-evolution') && (
-        <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
-      )}
-      <Toaster />
+            ) : currentView === "settings" ? (
+              <SettingsView
+                dropboxUrl={dropboxUrl}
+                onUpdateDropboxUrl={handleUpdateDropboxUrl}
+              />
+            ) : currentView === "monthly-savings" ? (
+              <MonthlySavingsView
+                projects={projects}
+                showActiveOnly={showActiveOnly}
+              />
+            ) : currentView === "month-breakdown" ? (
+              <SavingsPerMonth
+                projects={projects}
+                showActiveOnly={showActiveOnly}
+                onAllocationChange={loadProjects}
+              />
+            ) : currentView === "projection-epargne" ? (
+              <GoalSavingsProjectionView
+                projects={projects}
+                showActiveOnly={showActiveOnly}
+              />
+            ) : currentView === "savings-evolution" ? (
+              <SavingsEvolutionView
+                projects={projects}
+                savingsAccounts={savingsAccounts}
+              />
+            ) : currentView === "category-matrix" ? (
+              <CategoryMatrixView />
+            ) : currentView === "projects-table" ? (
+              <ProjectsTableView
+                projects={projects}
+                onUpdateProject={handleUpdateProject}
+                onProjectSelect={handleProjectSelect}
+                onViewChange={handleViewChange}
+              />
+            ) : currentView === "transactions-list" ? (
+              <AllTransactionsView />
+            ) : selectedProject ? (
+              <>
+                <ProjectHeader
+                  project={selectedProject}
+                  onPlannedBudgetChange={(projId, plannedBudget) => {
+                    setProjects(prev => prev.map(p => p.id === projId ? Object.assign({}, p, { plannedBudget }) : p));
+                  }}
+                  onDatesChange={handleDatesChange}
+                  onArchiveProject={handleArchiveProject}
+                  onDeleteProject={handleDeleteProject}
+                  onNameChange={(projId, name) => {
+                    setProjects(prev => prev.map(p => p.id === projId ? Object.assign({}, p, { name }) : p));
+                  }}
+                />
+                <ProjectSavingGoalsPanel projectId={selectedProject.id} />
+                <BudgetChart data={chartData} projectName={selectedProject.name} plannedBudget={selectedProject.plannedBudget} />
+                <TransactionsList transactions={projectTransactions} />
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Sélectionnez un projet pour voir les détails</p>
+              </div>
+            )}
+          </main>
+        </div>
+        {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne' || currentView === 'savings-evolution' || currentView === 'category-matrix' || currentView === 'transactions-list') && (
+          <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
+        )}
+        <Toaster />
       </ErrorBoundary>
     </SidebarProvider>
   );
 }
 
-// Composant racine avec le provider d'authentification
-export default function App() {
+// Wrapper avec React Router pour gérer les URLs
+function AppWithRouter() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
+
+// Composant racine
+export default AppWithRouter;

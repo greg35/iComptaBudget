@@ -47,15 +47,25 @@ export interface ProjectMonthlyGoalPerformance {
   status: 'over' | 'under' | 'on_track' | 'no_goal';
 }
 
+export interface TransactionSplit {
+  id: string;
+  amount: number;
+  category: string | null;
+  comment: string;
+  project?: string;
+}
+
 export interface Transaction {
   id: string;
-  projectId: string;
+  amount: number;
   date: string;
   description: string;
-  amount: number;
   type: 'income' | 'expense';
-  category: string;
-  comment?: string;
+  category?: string | null; // Kept for backward compatibility or simple display
+  comment?: string; // Kept for backward compatibility
+  accountId?: string;
+  isManual?: boolean;
+  splits?: TransactionSplit[];
 }
 
 export interface MonthlyData {
@@ -72,7 +82,7 @@ export interface SavingsAccount {
   type: 'livret' | 'compte_courant' | 'pel' | 'autre';
 }
 
-export type ViewType = 'home' | 'project' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projects-table' | 'projection-epargne' | 'savings-evolution';
+export type ViewType = 'home' | 'settings' | 'monthly-savings' | 'month-breakdown' | 'projection-epargne' | 'savings-evolution' | 'category-matrix' | 'projects-table' | 'project' | 'transactions-list';
 
 export interface MonthlyManualSavings {
   month: string; // YYYY-MM

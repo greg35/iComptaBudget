@@ -329,7 +329,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
             ))
         `;
         
-        console.log('Executing total query for', monthKey);
+        console.log('Executing total query :', totalQuery);
         
         const totalResult = db.exec(totalQuery);
         let totalSavings = 0;
@@ -357,6 +357,33 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
             console.error(`Error calculating savings balance for month ${monthKey}:`, e && e.message);
           }
         }
+
+        // Calculate provision amounts for the month
+        let provisionAmount = 0;
+        try {
+          const provisionQuery = `
+            SELECT SUM(CAST(s.amount AS REAL)) as provision
+            FROM ICTransactionSplit s
+            LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+            LEFT JOIN ICCategory c ON s.category = c.ID
+            WHERE
+              t.account IN (${accountFilter})
+              AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND lower(c.name) LIKE '%provision%'
+          `;
+          const provisionResult = db.exec(provisionQuery);
+          if (provisionResult && provisionResult[0] && provisionResult[0].values && provisionResult[0].values[0]) {
+            provisionAmount = Number(provisionResult[0].values[0][0]) || 0;
+          }
+        } catch (e) {
+          console.error(`Error calculating provisions for month ${monthKey}:`, e && e.message);
+        }
+
+        // Create a mapping from project names to IDs
+        const projectNameToId = {};
+        projects.forEach(project => {
+          projectNameToId[project.name] = project.id;
+        });
 
         // Calculate total spent (expenses) for the month: negative amounts excluding provisions and savings categories
         let totalMonthlyProjectSpent = 0;
@@ -425,12 +452,6 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
         const icomptaProjectBreakdown = {};
         const manualProjectBreakdown = {};
         
-        // Create a mapping from project names to IDs
-        const projectNameToId = {};
-        projects.forEach(project => {
-          projectNameToId[project.name] = project.id;
-        });
-        
         // First, get manual allocations for this month
         if (fs.existsSync(config.DATA_DB_PATH)) {
           try {
@@ -442,7 +463,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
               SELECT projectId, allocatedAmount
               FROM project_allocations
               WHERE month = ?
-                AND allocatedAmount > 0
+                AND allocatedAmount != 0
             `;
             
             const allocationsResult = budgetDb.exec(allocationsQuery, [monthKey]);
@@ -452,7 +473,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
               for (const row of allocationsResult[0].values) {
                 const projectId = row[0];
                 const amount = Number(row[1]) || 0;
-                if (amount > 0) {
+                if (amount !== 0) {
                   manualProjectBreakdown[projectId] = (manualProjectBreakdown[projectId] || 0) + amount;
                 }
               }
@@ -528,7 +549,8 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
           manualProjectBreakdown,
           projectSpentBreakdown,
           totalMonthlyProjectSpent,
-          savingsAccountsBalance
+          savingsAccountsBalance,
+          provisionAmount
         };
   } catch (e) {
     console.error(`Error calculating data for month ${monthKey}:`, e && e.message);

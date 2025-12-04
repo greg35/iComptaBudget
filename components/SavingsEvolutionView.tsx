@@ -54,7 +54,7 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
     ? _savingsAccounts.reduce((sum: number, account: any) => sum + (Number(account?.balance) || 0), 0)
     : 0;
   const fallbackProjectSavings = Array.isArray(_projects)
-    ? _projects.reduce((sum: number, project: any) => sum + (Number(project?.currentSavings) || 0), 0)
+    ? _projects.filter((p: any) => !p.archived).reduce((sum: number, project: any) => sum + (Number(project?.currentSavings) || 0), 0)
     : 0;
   const fallbackFreeSavings = Math.max(0, fallbackTotalSavings - fallbackProjectSavings);
 
@@ -101,6 +101,8 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
   }, [compareMonth]);
 
   const isProjectActiveForMonth = React.useCallback((project: any, monthKey: string) => {
+    // Si le projet n'existe pas dans nos métadonnées, on le compte comme actif
+    // pour la compatibilité avec les anciennes données
     if (!project) return true;
     if (project.archived) return false;
     if (project.endDate) {
@@ -210,19 +212,24 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
             cumulativeSavedPerProject.set(key, savedTotal);
             cumulativeSpentPerProject.set(key, spentTotal);
 
-            let net = Math.max(0, savedTotal - spentTotal);
+            // L'épargne projet = montant ALLOUÉ (sans soustraire les dépenses)
+            // Les dépenses sont prises sur l'épargne projet, pas sur l'épargne libre
+            let allocated = Math.max(0, savedTotal);
             const meta = getProjectMeta(key);
+
             if (!hasProjectStarted(meta, monthKey) || !isProjectActiveForMonth(meta, monthKey)) {
-              net = 0;
+              allocated = 0;
             }
 
-            if (net > 0) {
-              projectNets[key] = net;
-              rawProjectSavings += net;
+            if (allocated > 0) {
+              projectNets[key] = allocated;
+              rawProjectSavings += allocated;
             }
           });
 
           const projectSavings = Math.max(0, Math.min(savingsAccountsBalance, rawProjectSavings));
+
+          // L'épargne libre = ce qui reste après avoir retiré l'épargne projet
           const freeSavings = Math.max(0, savingsAccountsBalance - projectSavings);
 
           return {
@@ -254,7 +261,7 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
     if (startDate && endDate) {
       fetchEvolutionData();
     }
-  }, [periodMonths, startDate, endDate, customPeriod]);
+  }, [periodMonths, startDate, endDate, customPeriod, getProjectMeta, hasProjectStarted, isProjectActiveForMonth]);
 
   const formatMonth = (monthKey: string) => {
     const [year, month] = monthKey.split('-');
@@ -272,13 +279,42 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
   // Calculer les statistiques
   const currentMonth = evolutionData[evolutionData.length - 1];
   const previousMonth = evolutionData[evolutionData.length - 2];
-  const totalEvolution = currentMonth && previousMonth 
-    ? currentMonth.totalSavings - previousMonth.totalSavings 
+  const totalEvolution = currentMonth && previousMonth
+    ? currentMonth.totalSavings - previousMonth.totalSavings
     : 0;
 
-  const displayedTotalSavings = currentMonth ? currentMonth.totalSavings : fallbackTotalSavings;
-  const displayedProjectSavings = currentMonth ? currentMonth.projectSavings : fallbackProjectSavings;
-  const displayedFreeSavings = currentMonth ? currentMonth.freeSavings : fallbackFreeSavings;
+  // Pour le mois actuel, utiliser toujours les vraies valeurs (fallback) au lieu du calcul historique
+  // car le calcul historique peut être incomplet ou décalé
+  const today = new Date();
+  const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const isCurrentMonthDisplayed = currentMonth && currentMonth.month === currentMonthKey;
+
+  const displayedTotalSavings = isCurrentMonthDisplayed ? fallbackTotalSavings : (currentMonth ? currentMonth.totalSavings : fallbackTotalSavings);
+  const displayedProjectSavings = isCurrentMonthDisplayed ? fallbackProjectSavings : (currentMonth ? currentMonth.projectSavings : fallbackProjectSavings);
+  const displayedFreeSavings = isCurrentMonthDisplayed ? fallbackFreeSavings : (currentMonth ? currentMonth.freeSavings : fallbackFreeSavings);
+
+  // Utiliser les vraies valeurs actuelles pour TOUS les mois
+  // car nous ne pouvons pas calculer historiquement l'épargne projet correctement
+  // L'épargne projet est basée sur currentSavings des projets actifs (valeur actuelle)
+  // Ce qui varie dans le temps est le solde total des comptes d'épargne
+  const chartData = React.useMemo(() => {
+    if (evolutionData.length === 0) return [];
+
+    return evolutionData.map((data) => {
+      // Pour tous les mois : garder le solde des comptes qui varie
+      // mais utiliser l'épargne projet actuelle (currentSavings des projets actifs)
+      const totalSavings = data.totalSavings; // Solde des comptes pour ce mois (historique)
+      const projectSavings = Math.min(totalSavings, fallbackProjectSavings); // Épargne projet actuelle, plafonnée au solde
+      const freeSavings = Math.max(0, totalSavings - projectSavings);
+
+      return {
+        ...data,
+        totalSavings,
+        projectSavings,
+        freeSavings
+      };
+    });
+  }, [evolutionData, fallbackProjectSavings]);
 
   const averageMonthlySavings = evolutionData.length > 0
     ? evolutionData.reduce((sum, data) => sum + data.monthlySavings, 0) / evolutionData.length
@@ -459,7 +495,7 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={evolutionData}
+                  data={chartData}
                   margin={{ top: 16, right: 32, bottom: 48, left: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />

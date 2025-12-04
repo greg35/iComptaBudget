@@ -18,6 +18,7 @@ const savingsAmountsRoutes = require('./src/routes/savingsAmounts');
 const autoMapRoutes = require('./src/routes/autoMap');
 const splitProjectsRoutes = require('./src/routes/splitProjects');
 const savingGoalsRoutes = require('./src/routes/savingGoals');
+const categoryMatrixRoutes = require('./src/routes/categoryMatrix');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/savings-amounts', savingsAmountsRoutes);
 app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
 app.use('/api/saving-goals', savingGoalsRoutes);
+app.use('/api/category-matrix', categoryMatrixRoutes);
 
 // Endpoint de healthcheck simple (utilisé par Docker HEALTHCHECK)
 app.get('/api/health', (req, res) => {

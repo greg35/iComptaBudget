@@ -1,13 +1,21 @@
 import { MonthlyData } from "../types/budget";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 interface BudgetChartProps {
   data: MonthlyData[];
   projectName: string;
+  plannedBudget: number;
 }
 
-export function BudgetChart({ data, projectName }: BudgetChartProps) {
+export function BudgetChart({ data, projectName, plannedBudget }: BudgetChartProps) {
+  // Calculer le maximum entre les données et le budget prévu pour ajuster l'échelle
+  const maxDataValue = Math.max(
+    ...data.map(d => Math.max(d.savings, d.totalMonthlyProjectSpent)),
+    plannedBudget
+  );
+  const yAxisMax = Math.ceil(maxDataValue * 1.1); // Ajouter 10% de marge
+
   return (
     <Card>
       <CardHeader>
@@ -22,27 +30,40 @@ export function BudgetChart({ data, projectName }: BudgetChartProps) {
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
-              <YAxis 
+              <YAxis
+                domain={[0, yAxisMax]}
                 tickFormatter={(value) => `${value.toLocaleString('fr-FR')}€`}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number) => [`${Number(value).toLocaleString('fr-FR')}€`]}
                 labelFormatter={(label: string) => `Mois: ${label}`}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="savings" 
-                stroke="#16a34a" 
+              <ReferenceLine
+                y={plannedBudget}
+                stroke="#2563eb"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                label={{
+                  value: `Budget prévu: ${plannedBudget.toLocaleString('fr-FR')}€`,
+                  position: 'insideTopRight',
+                  fill: '#2563eb',
+                  fontSize: 12
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="savings"
+                stroke="#16a34a"
                 strokeWidth={2}
                 name="Épargné"
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="totalMonthlyProjectSpent" 
-                stroke="#dc2626" 
+              <Line
+                type="monotone"
+                dataKey="totalMonthlyProjectSpent"
+                stroke="#dc2626"
                 strokeWidth={2}
                 name="Dépensé"
                 dot={{ r: 4 }}

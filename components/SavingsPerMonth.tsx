@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { apiFetch } from '../utils/apiClient';
 import { Project, ProjectSavingGoal, ProjectAllocation } from '../types/budget';
 import { Button } from './ui/button';
@@ -9,6 +9,7 @@ import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, 
 interface SavingsPerMonthProps {
   projects?: Project[];
   showActiveOnly?: boolean;
+  onAllocationChange?: () => void;
 }
 
 // Composant d'édition inline pour les montants
@@ -129,13 +130,15 @@ interface CurrentMonthData {
   month: string;
   totalSavings: number;
   totalMonthlyProjectSpent?: number;
+  provisionAmount?: number;
   projectBreakdown: { [projectName: string]: number };
   targetBreakdown: { [projectName: string]: number };
 }
 
 export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   projects = [],
-  showActiveOnly = false
+  showActiveOnly = false,
+  onAllocationChange
 }) => {
   const [currentMonthData, setCurrentMonthData] = useState<CurrentMonthData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -223,15 +226,30 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
 
       // Mettre à jour l'état local
       const key = getAllocationKey(projectId, monthKey);
-      setAllocations(prev => ({
-        ...prev,
-        [key]: {
-          id: key,
-          projectId,
-          month: monthKey,
-          allocatedAmount: amount
-        }
-      }));
+      if (amount === 0) {
+        // Supprimer l'allocation du state si le montant est 0
+        setAllocations(prev => {
+          const newAllocations = { ...prev };
+          delete newAllocations[key];
+          return newAllocations;
+        });
+      } else {
+        // Ajouter ou mettre à jour l'allocation
+        setAllocations(prev => ({
+          ...prev,
+          [key]: {
+            id: key,
+            projectId,
+            month: monthKey,
+            allocatedAmount: amount
+          }
+        }));
+      }
+
+      // Notifier le parent que les allocations ont changé
+      if (onAllocationChange) {
+        onAllocationChange();
+      }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'allocation:', error);
       throw error; // Re-lancer l'erreur pour que le composant inline la gère
@@ -279,6 +297,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       let totalMonthlySavings = 0;
       let totalMonthlyProjectSpent = 0;
       let projectBreakdown: { [projectName: string]: number } = {};
+      let provisionAmount = 0;
       
       try {
         console.log('Fetching monthly savings for monthKey:', monthKey);
@@ -299,6 +318,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
             totalMonthlySavings = currentMonthEntry.totalSavings || 0;
             totalMonthlyProjectSpent = currentMonthEntry.totalMonthlyProjectSpent || 0;
             projectBreakdown = currentMonthEntry.projectBreakdown || {};
+            provisionAmount = currentMonthEntry.provisionAmount || 0;
           }
           console.log('totalMonthlySavings set to:', totalMonthlySavings);
           console.log('projectBreakdown set to:', projectBreakdown);
@@ -323,6 +343,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
         totalSavings: totalMonthlySavings, // Montant épargné total du mois (depuis iCompta)
         totalMonthlyProjectSpent: totalMonthlyProjectSpent,
         projectBreakdown, // Répartition par projet (depuis iCompta)
+        provisionAmount: provisionAmount || 0,
         targetBreakdown: {}
       });
     } catch (error) {
@@ -380,6 +401,46 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
     }).format(amount);
   };
 
+  // Filtrer les projets selon showActiveOnly
+  // IMPORTANT: Doit être avant le if (loading) pour respecter les règles des hooks
+  const filteredProjects = projects.filter(project => {
+    if (!showActiveOnly) return true;
+    return !project.archived;
+  });
+
+  // Calculer les données pour chaque projet
+  // Utiliser useMemo pour forcer le recalcul quand allocations change
+  // IMPORTANT: Doit être avant le if (loading) pour respecter les règles des hooks
+  const projectTargets = useMemo(() => {
+    return filteredProjects.map(project => {
+      // Récupérer l'objectif mensuel depuis la table project_saving_goals
+      const monthlyTarget = getGoalForMonth(project.id, monthKey) || 0;
+
+      // Utiliser l'allocation manuelle si elle existe, sinon utiliser les données iCompta
+      const allocatedAmount = getAllocatedAmount(project.id, monthKey);
+      const icomptaAmount = currentMonthData?.projectBreakdown
+        ? (currentMonthData.projectBreakdown[project.name] || 0)
+        : 0;
+
+      // Priorité à l'allocation manuelle si elle existe (différent de 0), sinon utiliser iCompta
+      const currentSavings = allocatedAmount !== 0 ? allocatedAmount : icomptaAmount;
+      const currentSpent = project.currentSpent || 0;
+
+      const difference = currentSavings - monthlyTarget;
+      const isTargetMet = difference >= 0;
+
+      return {
+        projectId: project.id,
+        projectName: project.name,
+        monthlyTarget,
+        currentSavings,
+        currentSpent,
+        difference,
+        isTargetMet
+      };
+    });
+  }, [filteredProjects, monthKey, allocations, projectGoals, currentMonthData]);
+
   if (loading) {
     return (
       <div className="p-6">
@@ -413,41 +474,6 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       </div>
     );
   }
-
-  // Filtrer les projets selon showActiveOnly
-  const filteredProjects = projects.filter(project => {
-    if (!showActiveOnly) return true;
-    return !project.archived;
-  });
-
-  // Calculer les données pour chaque projet
-  const projectTargets = filteredProjects.map(project => {
-    // Récupérer l'objectif mensuel depuis la table project_saving_goals
-    const monthlyTarget = getGoalForMonth(project.id, monthKey) || 0;
-    
-    // Utiliser l'allocation manuelle si elle existe, sinon utiliser les données iCompta
-    const allocatedAmount = getAllocatedAmount(project.id, monthKey);
-    const icomptaAmount = currentMonthData?.projectBreakdown 
-      ? (currentMonthData.projectBreakdown[project.name] || 0)
-      : 0;
-    
-    // Priorité à l'allocation manuelle si elle existe (> 0), sinon utiliser iCompta
-    const currentSavings = allocatedAmount > 0 ? allocatedAmount : icomptaAmount;
-    const currentSpent = project.currentSpent || 0;
-    
-    const difference = currentSavings - monthlyTarget;
-    const isTargetMet = difference >= 0;
-
-    return {
-      projectId: project.id,
-      projectName: project.name,
-      monthlyTarget,
-      currentSavings,
-      currentSpent,
-      difference,
-      isTargetMet
-    };
-  });
 
   const totalTarget = projectTargets.reduce((sum, target) => sum + target.monthlyTarget, 0);
   
@@ -604,6 +630,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
                           onSave={(amount) => saveAllocationInline(target.projectId, amount)}
                           formatValue={(value) => formatCurrency(value)}
                           className="text-right"
+                          placeholder="0 (+ ou -)"
                         />
                         <Button
                           variant="ghost"
@@ -672,11 +699,25 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
                   <CardTitle className="text-sm">Provision à prévoir</CardTitle>
                   <Euro className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl flex items-center gap-2">
-                    {formatCurrency(totalMonthlyProjectSpent)}
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Provision nécessaire</p>
+                    <div className="text-2xl font-semibold">
+                      {formatCurrency(totalMonthlyProjectSpent)}
+                    </div>
                   </div>
-                  {/* <p className="text-xs text-muted-foreground">{(projectSpent/totalMonthlySavings*100).toFixed(1)}% attribué au fond d'urgence</p> */}
+                  <div className="border-t pt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Montant déjà versé</p>
+                    <div className="text-lg font-medium text-green-600">
+                      {formatCurrency(currentMonthData?.provisionAmount || 0)}
+                    </div>
+                  </div>
+                  <div className="border-t pt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Montant restant à verser</p>
+                    <div className={`text-lg font-medium ${(totalMonthlyProjectSpent - (currentMonthData?.provisionAmount || 0)) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {formatCurrency(totalMonthlyProjectSpent - (currentMonthData?.provisionAmount || 0))}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

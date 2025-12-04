@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
@@ -25,13 +25,13 @@ interface ProjectsSidebarProps {
 export function ProjectsSidebar({ projects, selectedProjectId, currentView, showActiveOnly, onProjectSelect, onViewChange, onCreateProject, onShowActiveOnlyChange, onUpdateAccounts, isUpdatingAccounts }: ProjectsSidebarProps) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const { logout, user } = useAuth();
-  
+
   const handleLogout = () => {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
       logout();
     }
   };
-  
+
   const fmt = (v?: number | null) => new Intl.NumberFormat('fr-FR').format(Number(v ?? 0));
   // sort projects by name descending (Z -> A), handle missing names
   const sorted = [...(projects || [])].sort((a, b) => {
@@ -82,6 +82,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
+              onClick={() => onViewChange('transactions-list')}
+              isActive={currentView === 'transactions-list'}
+              className="w-full"
+            >
+              <List className="h-4 w-4" />
+              <span>Transactions</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
               onClick={() => onViewChange('monthly-savings')}
               isActive={currentView === 'monthly-savings'}
               className="w-full"
@@ -118,6 +128,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <TrendingUp className="h-4 w-4" />
               <span>Évolution épargne</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('category-matrix')}
+              isActive={currentView === 'category-matrix'}
+              className="w-full"
+            >
+              <Grid3x3 className="h-4 w-4" />
+              <span>Dépenses par catégorie</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -161,8 +181,8 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
         </SidebarMenu>
       </SidebarContent>
 
-            
-            <SidebarFooter className="p-4">
+
+      <SidebarFooter className="p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs text-muted-foreground">
             Connecté: {user?.email}
