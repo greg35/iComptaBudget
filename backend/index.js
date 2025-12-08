@@ -45,6 +45,7 @@ app.use('/api/auto-map', autoMapRoutes);
 app.use('/api/split-projects', splitProjectsRoutes);
 app.use('/api/saving-goals', savingGoalsRoutes);
 app.use('/api/category-matrix', categoryMatrixRoutes);
+app.use('/api/assistant', require('./src/routes/assistant'));
 
 // Endpoint de healthcheck simple (utilisé par Docker HEALTHCHECK)
 app.get('/api/health', (req, res) => {

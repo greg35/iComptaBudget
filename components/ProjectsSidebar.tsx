@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Bot } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
@@ -148,6 +148,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <Settings className="h-4 w-4" />
               <span>Paramètres</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('assistant')}
+              isActive={currentView === 'assistant'}
+              className="w-full"
+            >
+              <Bot className="h-4 w-4" />
+              <span>Assistant IA</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

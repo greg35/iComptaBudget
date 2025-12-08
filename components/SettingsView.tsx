@@ -44,7 +44,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const loadAccountPreferences = async () => {
     setIsLoadingPreferences(true);
     try {
-    const response = await apiFetch('/api/account-preferences');
+      const response = await apiFetch('/api/account-preferences');
       if (response.ok) {
         const preferences = await response.json();
         setAccountPreferences(preferences);
@@ -60,10 +60,10 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const refreshAccountList = async () => {
     setIsRefreshingAccounts(true);
     try {
-    const response = await apiFetch('/api/account-preferences/refresh', {
+      const response = await apiFetch('/api/account-preferences/refresh', {
         method: 'POST',
       });
-      
+
       if (response.ok) {
         await loadAccountPreferences();
         toast.success("Liste des comptes mise à jour !");
@@ -86,7 +86,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
 
       const updatedPref = { ...currentPref, [field]: value };
 
-    const response = await apiFetch('/api/account-preferences', {
+      const response = await apiFetch('/api/account-preferences', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,14 +101,14 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
 
       if (response.ok) {
         // Update local state
-        setAccountPreferences(prev => 
-          prev.map(pref => 
-            pref.accountId === accountId 
+        setAccountPreferences(prev =>
+          prev.map(pref =>
+            pref.accountId === accountId
               ? updatedPref
               : pref
           )
         );
-        
+
         const fieldLabel = field === 'includeSavings' ? 'épargne' : 'dépenses';
         toast.success(value ? `Compte inclus dans les calculs d'${fieldLabel}` : `Compte exclu des calculs d'${fieldLabel}`);
       } else {
@@ -123,7 +123,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const saveAllPreferences = async () => {
     setIsSavingPreferences(true);
     try {
-    const response = await apiFetch('/api/account-preferences/save-all', {
+      const response = await apiFetch('/api/account-preferences/save-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,13 +149,13 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
 
   // Fonctions pour sélectionner/désélectionner tous les comptes
   const toggleAllSavings = (checked: boolean) => {
-    setAccountPreferences(prev => 
+    setAccountPreferences(prev =>
       prev.map(pref => ({ ...pref, includeSavings: checked }))
     );
   };
 
   const toggleAllChecking = (checked: boolean) => {
-    setAccountPreferences(prev => 
+    setAccountPreferences(prev =>
       prev.map(pref => ({ ...pref, includeChecking: checked }))
     );
   };
@@ -170,7 +170,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     setIsLoading(true);
     try {
       // Sauvegarder dans la base de données via l'API
-  const response = await apiFetch('/api/settings', {
+      const response = await apiFetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
       }
 
       const result = await response.json();
-      
+
       // Mettre à jour l'état local
       onUpdateDropboxUrl(editUrl);
       setIsEditing(false);
@@ -217,6 +217,51 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     }
   };
 
+  const [apiKey, setApiKey] = useState('');
+  const [isEditingApiKey, setIsEditingApiKey] = useState(false);
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await apiFetch('/api/settings');
+      if (response.ok) {
+        const settings = await response.json();
+        if (settings.openai_api_key) {
+          setApiKey(settings.openai_api_key);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    setIsSavingApiKey(true);
+    try {
+      const response = await apiFetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'openai_api_key', value: apiKey })
+      });
+
+      if (response.ok) {
+        toast.success("Clé API OpenAI sauvegardée !");
+        setIsEditingApiKey(false);
+      } else {
+        throw new Error('Failed to save API key');
+      }
+    } catch (error) {
+      console.error('Error saving API key:', error);
+      toast.error("Erreur lors de la sauvegarde de la clé API");
+    } finally {
+      setIsSavingApiKey(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -228,6 +273,65 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
           </p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assistant IA</CardTitle>
+          <CardDescription>
+            Configurez votre clé API OpenAI pour utiliser l'assistant
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="openai-api-key">Clé API OpenAI</Label>
+            <div className="flex gap-2">
+              <Input
+                id="openai-api-key"
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                disabled={!isEditingApiKey}
+                className={isEditingApiKey ? "" : "bg-muted"}
+              />
+              {!isEditingApiKey ? (
+                <Button
+                  onClick={() => setIsEditingApiKey(true)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Modifier
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveApiKey}
+                    size="sm"
+                    disabled={isSavingApiKey}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    {isSavingApiKey ? 'Sauvegarde...' : 'Sauvegarder'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsEditingApiKey(false);
+                      loadSettings(); // Reload to reset changes
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Votre clé API est stockée localement dans votre base de données.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -250,7 +354,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                 className={isEditing ? "" : "bg-muted"}
               />
               {!isEditing ? (
-                <Button 
+                <Button
                   onClick={() => setIsEditing(true)}
                   variant="outline"
                   size="sm"
@@ -259,12 +363,12 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                 </Button>
               ) : (
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={handleSave} 
-                    size="sm" 
+                  <Button
+                    onClick={handleSave}
+                    size="sm"
                     disabled={isLoading}
-                    style={{ 
-                      backgroundColor: '#059669', 
+                    style={{
+                      backgroundColor: '#059669',
                       borderColor: '#059669',
                       color: 'white'
                     }}
@@ -285,7 +389,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                     <Check className="h-4 w-4 mr-1" />
                     {isLoading ? 'Sauvegarde...' : 'Sauvegarder'}
                   </Button>
-                  <Button onClick={handleCancel}  variant="outline"  size="sm" >
+                  <Button onClick={handleCancel} variant="outline" size="sm" >
                     Annuler
                   </Button>
                 </div>
@@ -348,12 +452,12 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
           </div>
 
           <div className="flex gap-3">
-            <Button 
+            <Button
               onClick={handleUpdateAccounts}
               disabled={!dropboxUrl || isUpdatingAccounts}
               size="default"
-              style={{ 
-                backgroundColor: dropboxUrl && !isUpdatingAccounts ? '#2563eb' : undefined, 
+              style={{
+                backgroundColor: dropboxUrl && !isUpdatingAccounts ? '#2563eb' : undefined,
                 borderColor: dropboxUrl && !isUpdatingAccounts ? '#2563eb' : undefined,
                 color: dropboxUrl && !isUpdatingAccounts ? 'white' : undefined
               }}
@@ -415,7 +519,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                 {accountPreferences.length} compte(s) configuré(s)
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={refreshAccountList}
                   disabled={isRefreshingAccounts}
                   variant="outline"
@@ -433,7 +537,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                     </>
                   )}
                 </Button>
-                <Button 
+                <Button
                   onClick={saveAllPreferences}
                   disabled={isSavingPreferences || accountPreferences.length === 0}
                   variant="default"
@@ -498,10 +602,10 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                       </th>
                     </tr>
                   </thead>
-                  
+
                   <tbody>
                     {accountPreferences.map((pref, index) => (
-                      <tr 
+                      <tr
                         key={pref.accountId}
                         className={`${index !== accountPreferences.length - 1 ? 'border-b' : ''} hover:bg-muted/20`}
                       >
@@ -520,7 +624,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                             <Checkbox
                               id={`savings-${pref.accountId}`}
                               checked={pref.includeSavings}
-                              onCheckedChange={(checked) => 
+                              onCheckedChange={(checked) =>
                                 updateAccountPreference(pref.accountId, pref.accountName, 'includeSavings', !!checked)
                               }
                             />
@@ -531,7 +635,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                             <Checkbox
                               id={`checking-${pref.accountId}`}
                               checked={pref.includeChecking}
-                              onCheckedChange={(checked) => 
+                              onCheckedChange={(checked) =>
                                 updateAccountPreference(pref.accountId, pref.accountName, 'includeChecking', !!checked)
                               }
                             />
@@ -550,7 +654,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
                 <span className="text-sm font-medium">Information</span>
               </div>
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                Cochez les cases pour inclure les comptes dans les calculs d'épargne mensuelle et de dépenses. 
+                Cochez les cases pour inclure les comptes dans les calculs d'épargne mensuelle et de dépenses.
                 Cliquez sur "Actualiser la liste" après avoir ajouté de nouveaux comptes dans votre base de données.
               </p>
             </div>

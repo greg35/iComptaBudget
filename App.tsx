@@ -20,6 +20,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { ProjectsTableView } from "./components/ProjectsTableView";
 import { AllTransactionsView } from "./components/AllTransactionsView";
+import { AssistantView } from "./components/AssistantView";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { LoginForm } from "./components/LoginForm";
 import { toast } from "sonner";
@@ -137,6 +138,7 @@ function BudgetApp() {
       <Route path="/category-matrix" element={<BudgetAppContent />} />
       <Route path="/projects-table" element={<BudgetAppContent />} />
       <Route path="/transactions" element={<BudgetAppContent />} />
+      <Route path="/assistant" element={<BudgetAppContent />} />
       <Route path="/project/:projectId" element={<BudgetAppContent />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -160,8 +162,9 @@ function BudgetAppContent() {
                 location === "/category-matrix" ? "category-matrix" :
                   location === "/projects-table" ? "projects-table" :
                     location === "/transactions" ? "transactions-list" :
-                      location.startsWith("/project/") ? "project" :
-                        "home";
+                      location === "/assistant" ? "assistant" :
+                        location.startsWith("/project/") ? "project" :
+                          "home";
 
   const selectedProjectId = projectId || null;
 
@@ -479,6 +482,7 @@ function BudgetAppContent() {
       "category-matrix": "/category-matrix",
       "projects-table": "/projects-table",
       "transactions-list": "/transactions",
+      "assistant": "/assistant",
       project: "/home", // Fallback, normalement on utilise handleProjectSelect
     };
     navigate(routes[view] || "/home");
@@ -773,6 +777,8 @@ function BudgetAppContent() {
               />
             ) : currentView === "transactions-list" ? (
               <AllTransactionsView />
+            ) : currentView === "assistant" ? (
+              <AssistantView />
             ) : selectedProject ? (
               <>
                 <ProjectHeader
