@@ -47,8 +47,8 @@ EOF
 fi
 
 # Verify critical files
-if [ ! -f "docker-compose.prod.yml" ]; then
-    echo "⚠️  docker-compose.prod.yml not found. Using default docker-compose.yml as fallback or failing..."
+if [ ! -f "docker-compose.build.yml" ]; then
+    echo "⚠️  docker-compose.build.yml not found. Using default docker-compose.yml as fallback or failing..."
     # If we just cloned, it should be there. If not, maybe the repo doesn't have it yet?
     # In a real scenario, we might want to curl it down if it's not in the repo, 
     # but since I am adding it to the repo now, it should be there after git clone/pull.
@@ -56,15 +56,15 @@ fi
 
 echo "🏗️  Building and starting application..."
 # Force recreation to ensure latest code is used
-docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+docker compose -f docker-compose.build.yml up -d --build --remove-orphans
 
 echo "⏳ Waiting for service to be healthy..."
 sleep 10
 
-if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+if docker compose -f docker-compose.build.yml ps | grep -q "Up"; then
     echo "✅ Deployment successful!"
     echo "🌍 Application is running at http://localhost:2112"
 else
     echo "⚠️  Container might not be running correctly. Check logs with:"
-    echo "   cd $INSTALL_DIR && docker compose -f docker-compose.prod.yml logs -f"
+    echo "   cd $INSTALL_DIR && docker compose -f docker-compose.build.yml logs -f"
 fi

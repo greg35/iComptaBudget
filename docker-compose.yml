@@ -5,12 +5,11 @@ services:
     ports:
       - "${FRONTEND_PORT:-2112}:2112"
     volumes:
-      - ./icomptabudget/data:/data
+      - ./data:/data
     environment:
       - NODE_ENV=production
       - FRONTEND_PORT=2112
       - TZ=${TZ:-Europe/Paris}
-      # Database paths configuration
       - DB_PATH=/data/Comptes.cdb
       - DATA_DB_PATH=/data/iComptaBudgetData.sqlite
     restart: unless-stopped
