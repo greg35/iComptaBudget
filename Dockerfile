@@ -36,8 +36,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Créer un utilisateur non-root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 appuser
+RUN addgroup --system --gid 1000 nodejs
+RUN adduser --system --uid 1000 appuser
 
 # Copier le frontend buildé
 COPY --from=builder --chown=appuser:nodejs /app/build ./public
@@ -135,8 +135,8 @@ set -e
 
 APP_USER=appuser
 APP_GROUP=nodejs
-APP_UID=1001
-APP_GID=1001
+APP_UID=${APP_UID:-1000}
+APP_GID=${APP_GID:-1000}
 DATA_DIR=${DATA_DIR:-/data}
 
 echo "[entrypoint] Starting with user=$(id -u), DATA_DIR=$DATA_DIR"
