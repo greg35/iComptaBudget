@@ -94,3 +94,4 @@ L'application exclut automatiquement :
 - Vérifiez les exclusions de comptes
 - Contrôlez les filtres de catégories
 - Consultez les logs backend pour les erreurs SQL
+
