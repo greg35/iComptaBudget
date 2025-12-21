@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.9.0] - 2025-10-01
+
+### Corrigé
+- Permission compose + clean up
+
 ## [1.8.0] - 2025-10-01
 
 ### Corrigé

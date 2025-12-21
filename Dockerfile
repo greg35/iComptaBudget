@@ -36,8 +36,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Créer un utilisateur non-root
-RUN addgroup --system --gid 1000 nodejs
-RUN adduser --system --uid 1000 appuser
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 appuser
 
 # Copier le frontend buildé
 COPY --from=builder --chown=appuser:nodejs /app/build ./public
