@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.2] - 2026-01-30
+
+### Corrigé
+- Correction de la détection du "premier démarrage" : l'application vérifie maintenant si la base de données est vide (pas d'utilisateurs ni de configuration) plutôt que de vérifier simplement son existence, permettant ainsi l'affichage de l'écran d'importation même si la base de données a été pré-créée.
+
 ## [2.1.1] - 2026-01-30
 
 ### Corrigé

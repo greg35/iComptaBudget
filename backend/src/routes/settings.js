@@ -56,37 +56,63 @@ const upload = multer({
 // First startup detection endpoint
 router.get('/first-startup', async (req, res) => {
   try {
-    // Consider not first-startup if our app data DB exists and looks valid
-    const dataDbExists = fs.existsSync(config.DATA_DB_PATH);
-    let dataDbValid = false;
-    if (dataDbExists) {
+    if (fs.existsSync(config.DATA_DB_PATH)) {
       try {
-        const stat = fs.statSync(config.DATA_DB_PATH);
-        if (stat.isFile() && stat.size >= 100) {
-          const fd = fs.openSync(config.DATA_DB_PATH, 'r');
-          const buf = Buffer.alloc(16);
-          fs.readSync(fd, buf, 0, 16, 0);
-          fs.closeSync(fd);
-          dataDbValid = buf.toString('utf8') === 'SQLite format 3\0';
+        const SQL = await initSqlJs();
+        const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
+        const db = new SQL.Database(filebuffer);
+
+        // Check if users exist
+        let userCount = 0;
+        try {
+          const result = db.exec("SELECT COUNT(*) FROM users");
+          if (result && result[0] && result[0].values) {
+            userCount = result[0].values[0][0];
+          }
+        } catch (e) {
+          // Table might not exist yet if migration failed, assume 0
         }
-      } catch {}
+
+        // Check if dropbox_url is configured
+        let hasDropbox = false;
+        try {
+          const result = db.exec("SELECT value FROM settings WHERE key = 'dropbox_url'");
+          if (result && result[0] && result[0].values && result[0].values.length > 0) {
+            hasDropbox = !!result[0].values[0][0];
+          }
+        } catch (e) {
+          // Table might not exist
+        }
+
+        db.close();
+
+        // Consider it first startup if NO users AND NO dropbox configured
+        if (userCount === 0 && !hasDropbox) {
+          return res.json({ isFirstStartup: true, reason: 'no_users_and_no_dropbox' });
+        }
+        
+        return res.json({ isFirstStartup: false, reason: 'app_initialized' });
+
+      } catch (e) {
+        console.error('Error reading DB for first-startup check:', e);
+        // If DB exists but is unreadable, might be corrupted, let's say not first startup to avoid loop? 
+        // Or true to allow re-init? Let's say true to allow restore.
+        return res.json({ isFirstStartup: true, reason: 'db_unreadable' });
+      }
     }
 
-    if (dataDbValid) {
-      return res.json({ isFirstStartup: false, reason: 'data_database_exists' });
-    }
-
-    // If main iCompta database exists, also not first startup
+    // If main iCompta database exists, also not first startup (legacy check, but we prioritize app DB now)
     if (fs.existsSync(config.DB_PATH)) {
-      return res.json({ isFirstStartup: false, reason: 'main_database_exists' });
+       // If we have the CDB file but no Data DB (or empty), we might still want to configure?
+       // But ensureDataDbExists would have populated it.
+       // Let's stick to the DB content check above.
     }
 
     // Otherwise, we need to bootstrap
     return res.json({ isFirstStartup: true, reason: 'no_database_found' });
   } catch (e) {
     console.error('Error checking first startup:', e);
-    // Be conservative: if there is any error checking, assume not first-startup to avoid blocking usage
-    return res.json({ isFirstStartup: false, reason: 'check_error_treated_as_not_first_startup' });
+    return res.json({ isFirstStartup: false, reason: 'check_error' });
   }
 });
 
