@@ -12,6 +12,7 @@ Elle me permettra de mieux gérer mon budget pour mes différents projets.
 
 - **📊 Gestion de Projets** : Création, modification et archivage de projets budgétaires avec calculs automatiques
 - **💰 Analyse d'Épargne** : Vue mensuelle détaillée avec ventilation par projet et comptes
+- **💾 Sauvegarde & Restauration** : Sauvegarde locale de la base de données, téléchargement et importation de sauvegardes
 - **🏦 Gestion des Comptes** : Configuration flexible des comptes à inclure/exclure des calculs
 - **☁️ Synchronisation Dropbox** : Mise à jour automatique des données iCompta depuis Dropbox
 - **🎨 Interface Moderne** : Interface utilisateur responsive avec thème sombre/clair
@@ -118,6 +119,13 @@ L'application sera accessible à `http://localhost:2112`
 4. **Sauvegarder** les préférences
 
 Les comptes exclus ne seront pas pris en compte dans les calculs de solde.
+
+### Sauvegarde et Restauration
+1. Accéder aux **Paramètres** → **Sauvegarde & Restauration**
+2. **"Créer une sauvegarde"** : Crée une copie instantanée de la base de données.
+3. **Télécharger** : Récupérer le fichier `.sqlite` sur votre poste.
+4. **Importer** : Charger une sauvegarde depuis votre poste vers le serveur.
+5. **Restaurer** : Appliquer une sauvegarde (écrase les données actuelles avec une copie de sécurité automatique).
 
 ### Utilisation de iCompta
 J'utilise iCompta de la façon suivante : 

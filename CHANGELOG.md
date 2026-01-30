@@ -5,6 +5,14 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.0.0] - 2026-01-30
+
+### Ajouté
+- Système de sauvegarde et restauration de la base de données.
+- Possibilité de télécharger une sauvegarde sur son poste.
+- Possibilité d'importer une sauvegarde depuis son poste.
+- Mise à jour automatique du backend en développement avec `nodemon`.
+
 ## [1.9.0] - 2025-10-01
 
 ### Corrigé

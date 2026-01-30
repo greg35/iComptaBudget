@@ -31,6 +31,7 @@ RUN npm run build
 
 # Stage 3: Production
 FROM base AS runner
+LABEL org.opencontainers.image.source=https://github.com/greg35/iComptaBudget
 WORKDIR /app
 
 ENV NODE_ENV=production

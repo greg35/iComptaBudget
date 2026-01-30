@@ -1,6 +1,6 @@
 {
       "name": "icomptabudget",
-      "version": "1.9.0",
+      "version": "2.0.0",
       "private": true,
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
@@ -53,12 +53,13 @@
             "@types/react": "^19.1.12",
             "@types/recharts": "^1.8.29",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "concurrently": "^8.2.0",
+            "concurrently": "^8.2.2",
+            "nodemon": "^3.1.11",
             "vite": "6.3.5"
       },
       "scripts": {
             "dev": "vite",
-            "dev:back": "node backend/index.js",
+            "dev:back": "nodemon backend/index.js",
             "dev:all": "concurrently \"npm run dev:back\" \"npm run dev\"",
             "start": "lsof -ti tcp:2112 | xargs kill -9 2>/dev/null || true; lsof -ti tcp:2113 | xargs kill -9 2>/dev/null || true; npm run dev:all",
             "build": "vite build",

@@ -2,11 +2,39 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const initSqlJs = require('sql.js');
+const multer = require('multer');
 const config = require('../config');
 const { downloadFile, extractZip } = require('../utils/fileUtils');
 const { syncProjectsFromMainDb } = require('../services/projectService');
 
 const router = express.Router();
+
+// Configure Multer for backup imports
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    ensureBackupDir();
+    cb(null, config.BACKUP_DIR);
+  },
+  filename: function (req, file, cb) {
+    // Keep original filename but prevent overwriting existing files?
+    // For now, let's prepend a timestamp if it exists, or just keep it simple.
+    // Let's use the original name.
+    cb(null, file.originalname);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    // Accept only sqlite files or similar if needed.
+    // For now, accepting everything or check extension
+    if (file.originalname.endsWith('.sqlite') || file.originalname.endsWith('.db') || file.originalname.endsWith('.cdb')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only .sqlite, .db, .cdb files are allowed.'));
+    }
+  }
+});
 
 // First startup detection endpoint
 router.get('/first-startup', async (req, res) => {
@@ -180,6 +208,157 @@ router.post('/update-accounts', async (req, res) => {
       error: 'Erreur lors de la mise à jour des comptes', 
       details: error.message 
     });
+  }
+});
+
+// Backup endpoints
+// Ensure backup directory exists
+function ensureBackupDir() {
+  if (!fs.existsSync(config.BACKUP_DIR)) {
+    fs.mkdirSync(config.BACKUP_DIR, { recursive: true });
+  }
+}
+
+// Create backup
+router.post('/settings/backup', async (req, res) => {
+  try {
+    ensureBackupDir();
+    
+    if (!fs.existsSync(config.DATA_DB_PATH)) {
+      return res.status(404).json({ error: 'Database file not found' });
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `backup-${timestamp}.sqlite`;
+    const backupPath = path.join(config.BACKUP_DIR, filename);
+    
+    fs.copyFileSync(config.DATA_DB_PATH, backupPath);
+    
+    const stats = fs.statSync(backupPath);
+    
+    res.json({ 
+      success: true, 
+      backup: {
+        filename,
+        path: backupPath,
+        size: stats.size,
+        createdAt: stats.birthtime
+      }
+    });
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    res.status(500).json({ error: 'Failed to create backup' });
+  }
+});
+
+// Import backup
+router.post('/settings/import-backup', upload.single('backup'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Backup imported successfully',
+      file: {
+        filename: req.file.filename,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    console.error('Error importing backup:', error);
+    res.status(500).json({ error: error.message || 'Failed to import backup' });
+  }
+});
+
+// List backups
+router.get('/settings/backups', async (req, res) => {
+  try {
+    ensureBackupDir();
+    
+    const files = fs.readdirSync(config.BACKUP_DIR);
+    const backups = files
+      .filter(file => file.endsWith('.sqlite'))
+      .map(file => {
+        const filePath = path.join(config.BACKUP_DIR, file);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: file,
+          size: stats.size,
+          createdAt: stats.birthtime
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+      
+    res.json(backups);
+  } catch (error) {
+    console.error('Error listing backups:', error);
+    res.status(500).json({ error: 'Failed to list backups' });
+  }
+});
+
+// Restore backup
+router.post('/settings/restore', async (req, res) => {
+  try {
+    const { filename } = req.body;
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+    
+    const backupPath = path.join(config.BACKUP_DIR, filename);
+    if (!fs.existsSync(backupPath)) {
+      return res.status(404).json({ error: 'Backup file not found' });
+    }
+    
+    // Create a safety backup before restoring
+    if (fs.existsSync(config.DATA_DB_PATH)) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const safetyBackupPath = path.join(config.BACKUP_DIR, `pre-restore-${timestamp}.sqlite`);
+      fs.copyFileSync(config.DATA_DB_PATH, safetyBackupPath);
+    }
+    
+    // Restore
+    fs.copyFileSync(backupPath, config.DATA_DB_PATH);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    res.status(500).json({ error: 'Failed to restore backup' });
+  }
+});
+
+// Delete backup
+router.delete('/settings/backup/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const backupPath = path.join(config.BACKUP_DIR, filename);
+    
+    if (fs.existsSync(backupPath)) {
+      fs.unlinkSync(backupPath);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting backup:', error);
+    res.status(500).json({ error: 'Failed to delete backup' });
+  }
+});
+
+// Download backup
+router.get('/settings/backup/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const backupPath = path.join(config.BACKUP_DIR, filename);
+
+    if (!fs.existsSync(backupPath)) {
+      return res.status(404).json({ error: 'Backup file not found' });
+    }
+
+    res.download(backupPath, filename);
+  } catch (error) {
+    console.error('Error downloading backup:', error);
+    res.status(500).json({ error: 'Failed to download backup' });
   }
 });
 

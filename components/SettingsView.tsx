@@ -1,10 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { Settings, Save, Check, Download, RefreshCw, Users } from "lucide-react";
+import { Settings, Save, Check, Download, RefreshCw, Users, Trash2, History, RotateCcw, Upload } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 import { toast } from "sonner";
 import { apiFetch } from "../utils/apiClient";
 import { updateAccounts } from "../utils/accountsApi";
@@ -16,6 +27,12 @@ interface AccountPreference {
   accountName: string;
   includeSavings: boolean;
   includeChecking: boolean;
+}
+
+interface Backup {
+  filename: string;
+  size: number;
+  createdAt: string;
 }
 
 interface SettingsViewProps {
@@ -221,8 +238,17 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
   const [isEditingApiKey, setIsEditingApiKey] = useState(false);
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
+  // Backup state
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState<string | null>(null);
+  const [isDeletingBackup, setIsDeletingBackup] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     loadSettings();
+    loadBackups();
   }, []);
 
   const loadSettings = async () => {
@@ -237,6 +263,156 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     } catch (error) {
       console.error('Error loading settings:', error);
     }
+  };
+
+  const loadBackups = async () => {
+    setIsLoadingBackups(true);
+    try {
+      const response = await apiFetch('/api/settings/backups');
+      if (response.ok) {
+        const data = await response.json();
+        setBackups(data);
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error);
+      toast.error("Erreur lors du chargement des sauvegardes");
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    setIsCreatingBackup(true);
+    try {
+      const response = await apiFetch('/api/settings/backup', { method: 'POST' });
+      if (response.ok) {
+        toast.success("Sauvegarde créée avec succès");
+        loadBackups();
+      } else {
+        throw new Error('Failed to create backup');
+      }
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      toast.error("Erreur lors de la création de la sauvegarde");
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value to allow selecting the same file again
+    event.target.value = '';
+
+    const formData = new FormData();
+    formData.append('backup', file);
+
+    const toastId = toast.loading("Importation de la sauvegarde...");
+
+    try {
+      // Use standard fetch here because apiFetch might try to set Content-Type to JSON
+      // but FormData needs multipart/form-data boundary which fetch sets automatically
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/settings/import-backup', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.dismiss(toastId);
+        toast.success("Sauvegarde importée avec succès");
+        loadBackups();
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Import failed');
+      }
+    } catch (error: any) {
+      console.error('Error importing backup:', error);
+      toast.dismiss(toastId);
+      toast.error(error.message || "Erreur lors de l'importation");
+    }
+  };
+
+  const handleRestoreBackup = async (filename: string) => {
+    setIsRestoringBackup(filename);
+    try {
+      const response = await apiFetch('/api/settings/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) {
+        toast.success("Restauration effectuée avec succès");
+        // Reload page to ensure fresh state
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        throw new Error('Failed to restore backup');
+      }
+    } catch (error) {
+      console.error('Error restoring backup:', error);
+      toast.error("Erreur lors de la restauration");
+    } finally {
+      setIsRestoringBackup(null);
+    }
+  };
+
+  const handleDeleteBackup = async (filename: string) => {
+    setIsDeletingBackup(filename);
+    try {
+      const response = await apiFetch(`/api/settings/backup/${filename}`, { method: 'DELETE' });
+      if (response.ok) {
+        toast.success("Sauvegarde supprimée");
+        loadBackups();
+      } else {
+        throw new Error('Failed to delete backup');
+      }
+    } catch (error) {
+      console.error('Error deleting backup:', error);
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setIsDeletingBackup(null);
+    }
+  };
+
+  const handleDownloadBackup = async (filename: string) => {
+    try {
+      const response = await apiFetch(`/api/settings/backup/${filename}`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error('Download failed');
+      }
+    } catch (error) {
+      console.error('Error downloading backup:', error);
+      toast.error("Erreur lors du téléchargement");
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
   };
 
   const handleSaveApiKey = async () => {
@@ -499,6 +675,168 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sauvegarde & Restauration</CardTitle>
+          <CardDescription>
+            Gérez les sauvegardes locales de votre base de données
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+             <div className="text-sm text-muted-foreground">
+                {backups.length} sauvegarde(s) disponible(s)
+              </div>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".sqlite,.db,.cdb"
+                className="hidden"
+              />
+              <Button
+                onClick={handleImportClick}
+                variant="outline"
+                size="sm"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importer
+              </Button>
+              <Button
+                onClick={handleCreateBackup}
+                disabled={isCreatingBackup}
+                size="sm"
+              >
+                {isCreatingBackup ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Créer une sauvegarde
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="border rounded-md max-h-64 overflow-y-auto">
+            {isLoadingBackups ? (
+               <div className="text-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+              </div>
+            ) : backups.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Aucune sauvegarde disponible
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-left p-3 font-medium">Taille</th>
+                    <th className="text-right p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backups.map((backup) => (
+                    <tr key={backup.filename} className="border-b last:border-0 hover:bg-muted/20">
+                      <td className="p-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{formatDate(backup.createdAt)}</span>
+                          <span className="text-xs text-muted-foreground">{backup.filename}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">{formatFileSize(backup.size)}</td>
+                      <td className="p-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadBackup(backup.filename)}
+                            title="Télécharger"
+                          >
+                            <Download className="h-4 w-4 text-gray-600" />
+                          </Button>
+
+                           <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isRestoringBackup === backup.filename}
+                                title="Restaurer"
+                              >
+                                {isRestoringBackup === backup.filename ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-4 w-4 text-blue-600" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Restaurer cette sauvegarde ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir restaurer la sauvegarde du {formatDate(backup.createdAt)} ?
+                                  Les données actuelles seront remplacées. Une copie de sécurité des données actuelles sera créée avant la restauration.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRestoreBackup(backup.filename)}>
+                                  Restaurer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={isDeletingBackup === backup.filename}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Supprimer"
+                              >
+                                {isDeletingBackup === backup.filename ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                             <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Supprimer cette sauvegarde ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir supprimer définitivement la sauvegarde du {formatDate(backup.createdAt)} ?
+                                  Cette action est irréversible.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteBackup(backup.filename)} className="bg-red-600 hover:bg-red-700">
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </CardContent>
       </Card>
 

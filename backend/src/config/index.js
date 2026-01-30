@@ -6,6 +6,7 @@ const config = {
   // Database paths - stockées dans /data pour Docker
   DB_PATH: process.env.DB_PATH || path.join(DATA_DIR, 'Comptes.cdb'),
   DATA_DB_PATH: process.env.DATA_DB_PATH || path.join(DATA_DIR, 'iComptaBudgetData.sqlite'),
+  BACKUP_DIR: process.env.BACKUP_DIR || path.join(DATA_DIR, 'backups'),
   PROJECTS_FILE: path.join(__dirname, '..', '..', 'projects.json'),
 
   // Server configuration
