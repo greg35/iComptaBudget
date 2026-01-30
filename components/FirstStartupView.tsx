@@ -97,7 +97,10 @@ export function FirstStartupView({ onComplete }: FirstStartupViewProps) {
         body: JSON.stringify({ filename })
       });
 
-      if (!restoreResponse.ok) throw new Error('Échec de la restauration');
+      if (!restoreResponse.ok) {
+        const errorData = await restoreResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de la restauration');
+      }
 
       toast.dismiss(toastId);
       toast.success("Sauvegarde restaurée avec succès !");
