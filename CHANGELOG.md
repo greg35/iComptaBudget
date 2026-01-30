@@ -5,6 +5,12 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.1] - 2026-01-30
+
+### Corrigé
+- Correction de la création du dossier de sauvegarde lors de l'importation.
+- Amélioration de la gestion des erreurs lors de l'upload de sauvegarde.
+
 ## [2.1.0] - 2026-01-30
 
 ### Ajouté

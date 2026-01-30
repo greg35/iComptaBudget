@@ -9,11 +9,28 @@ const { syncProjectsFromMainDb } = require('../services/projectService');
 
 const router = express.Router();
 
+// Ensure backup directory exists
+function ensureBackupDir() {
+  try {
+    if (!fs.existsSync(config.BACKUP_DIR)) {
+      console.log('Creating backup directory:', config.BACKUP_DIR);
+      fs.mkdirSync(config.BACKUP_DIR, { recursive: true });
+    }
+  } catch (error) {
+    console.error('Error ensuring backup directory:', error);
+    throw error;
+  }
+}
+
 // Configure Multer for backup imports
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    ensureBackupDir();
-    cb(null, config.BACKUP_DIR);
+    try {
+      ensureBackupDir();
+      cb(null, config.BACKUP_DIR);
+    } catch (error) {
+      cb(error);
+    }
   },
   filename: function (req, file, cb) {
     // Keep original filename but prevent overwriting existing files?
@@ -212,13 +229,6 @@ router.post('/update-accounts', async (req, res) => {
 });
 
 // Backup endpoints
-// Ensure backup directory exists
-function ensureBackupDir() {
-  if (!fs.existsSync(config.BACKUP_DIR)) {
-    fs.mkdirSync(config.BACKUP_DIR, { recursive: true });
-  }
-}
-
 // Create backup
 router.post('/settings/backup', async (req, res) => {
   try {
