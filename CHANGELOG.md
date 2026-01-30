@@ -5,6 +5,13 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.0] - 2026-01-30
+
+### Ajouté
+- Possibilité de restaurer une sauvegarde existante directement depuis l'écran de configuration initiale.
+- Affichage de la version de l'application sur l'écran de configuration initiale.
+- Affichage de la version dans les logs de démarrage du serveur backend.
+
 ## [2.0.1] - 2026-01-30
 
 ### Corrigé

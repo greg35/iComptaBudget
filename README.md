@@ -80,9 +80,11 @@ npm run dev:back   # Backend (port 2113)
 L'application sera accessible à `http://localhost:2112`
 
 ### Configuration Initiale
-1. **Premier lancement** : L'assistant vous guidera pour configurer l'URL Dropbox
-2. **Synchronisation** : Les données iCompta seront téléchargées et synchronisées
-3. **Prêt !** : L'application est opérationnelle
+1. **Premier lancement** : L'assistant vous offre deux choix :
+   - **Restaurer une sauvegarde** : Importez un fichier `.sqlite` existant pour retrouver vos données.
+   - **Nouvelle configuration** : Configurez l'URL Dropbox pour synchroniser vos comptes iCompta.
+2. **Synchronisation** : Les données sont importées ou synchronisées.
+3. **Prêt !** : L'application est opérationnelle.
 
 ## 📁 Structure du Projet
 

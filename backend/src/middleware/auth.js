@@ -29,7 +29,7 @@ async function isFirstStartup() {
 }
 
 const PUBLIC_ALWAYS = new Set(['/health', '/first-startup']);
-const PUBLIC_FIRST_STARTUP = new Set(['/settings', '/update-accounts']);
+const PUBLIC_FIRST_STARTUP = new Set(['/settings', '/update-accounts', '/settings/import-backup', '/settings/restore']);
 
 const authMiddleware = async (req, res, next) => {
   // Express mounts this middleware at '/api', so req.path is the subpath, e.g. '/projects'

@@ -22,6 +22,10 @@ const categoryMatrixRoutes = require('./src/routes/categoryMatrix');
 
 const app = express();
 
+// Load version
+const pkg = require('./package.json');
+const version = pkg.version;
+
 // Configure middleware
 app.use(corsMiddleware);
 app.use(express.json());
@@ -61,9 +65,9 @@ console.log('Starting server with port:', port);
     await ensureDataDbExists();
     console.log('Migrating data DB...');
     await migrateDataDb();
-    console.log('Starting express server...');
+    console.log(`Starting express server (v${version})...`);
     app.listen(port, () => {
-      console.log(`Backend listening on http://${config.HOST}:${port}/api/`);
+      console.log(`Backend v${version} listening on http://${config.HOST}:${port}/api/`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
