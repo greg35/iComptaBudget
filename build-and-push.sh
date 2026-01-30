@@ -26,16 +26,23 @@ if ! docker info 2>/dev/null | grep -q "Username"; then
     fi
 fi
 
-# Build
-echo "🏗️  Building image..."
-docker build -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:$VERSION" .
+# Build and Push with multi-arch support
+echo "🏗️  Building and Pushing multi-arch image (linux/amd64, linux/arm64)..."
 
-# Push
-echo "⬆️  Pushing to GHCR..."
-docker push "$IMAGE_NAME:latest"
-docker push "$IMAGE_NAME:$VERSION"
+# Ensure a builder instance exists
+if ! docker buildx inspect mybuilder > /dev/null 2>&1; then
+  docker buildx create --name mybuilder --use
+  docker buildx inspect --bootstrap
+else
+  docker buildx use mybuilder
+fi
 
-echo "✅ Build and push completed successfully!"
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t "$IMAGE_NAME:latest" \
+  -t "$IMAGE_NAME:$VERSION" \
+  --push .
+
+echo "✅ Multi-arch build and push completed successfully!"
 echo "   Images: $IMAGE_NAME:latest, $IMAGE_NAME:$VERSION"
 
 # Release

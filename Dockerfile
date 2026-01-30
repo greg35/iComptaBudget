@@ -136,8 +136,8 @@ set -e
 
 APP_USER=appuser
 APP_GROUP=nodejs
-APP_UID=${APP_UID:-1000}
-APP_GID=${APP_GID:-1000}
+APP_UID=${APP_UID:-1001}
+APP_GID=${APP_GID:-1001}
 DATA_DIR=${DATA_DIR:-/data}
 
 echo "[entrypoint] Starting with user=$(id -u), DATA_DIR=$DATA_DIR"
