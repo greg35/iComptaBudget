@@ -58,6 +58,8 @@ Image multi-stage optimisée pour la production.
 NODE_ENV=production
 FRONTEND_PORT=2112        # Port d'exposition
 TZ=Europe/Paris          # Timezone
+APP_UID=1001             # UID de l'utilisateur de l'application (défaut: 1001)
+APP_GID=1001             # GID de l'utilisateur de l'application (défaut: 1001)
 ```
 
 ### Volumes montés
