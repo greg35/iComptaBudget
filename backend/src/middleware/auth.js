@@ -6,25 +6,53 @@ const config = require('../config');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 async function isFirstStartup() {
-  // Mirror logic of /api/first-startup: if data DB is valid OR main DB exists => not first-startup
   try {
-    if (fs.existsSync(config.DATA_DB_PATH)) {
+    // If DB file doesn't exist, it's definitely first startup
+    if (!fs.existsSync(config.DATA_DB_PATH)) return true;
+
+    // If DB exists, check content (users count)
+    // The previous check was too aggressive (only file existence), blocking restore
+    // setup when an empty DB was auto-created.
+    try {
+      const db = await openDataDb();
+      
+      let userCount = 0;
       try {
-        const stat = fs.statSync(config.DATA_DB_PATH);
-        if (stat.isFile() && stat.size >= 100) {
-          const fd = fs.openSync(config.DATA_DB_PATH, 'r');
-          const buf = Buffer.alloc(16);
-          fs.readSync(fd, buf, 0, 16, 0);
-          fs.closeSync(fd);
-          if (buf.toString('utf8') === 'SQLite format 3\0') return false;
+        const result = db.exec("SELECT COUNT(*) FROM users");
+        if (result && result[0] && result[0].values) {
+          userCount = result[0].values[0][0];
         }
-      } catch {}
+      } catch (e) {
+        // Table might not exist yet, treat as 0 users
+      }
+
+      let hasDropbox = false;
+      try {
+        const result = db.exec("SELECT value FROM settings WHERE key = 'dropbox_url'");
+        if (result && result[0] && result[0].values && result[0].values.length > 0) {
+          hasDropbox = !!result[0].values[0][0];
+        }
+      } catch (e) {
+        // Table might not exist
+      }
+
+      db.close();
+
+      // Consider it first startup (allowing public access to setup endpoints)
+      // if NO users AND NO dropbox configured.
+      if (userCount === 0 && !hasDropbox) {
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      console.error('Error opening DB for first-startup check:', e);
+      // If DB is unreadable/corrupted, return true to allow restore/setup to fix it
+      return true;
     }
-    if (fs.existsSync(config.DB_PATH)) return false;
-    return true;
-  } catch {
-    // On error, default to not first-startup to avoid unintentionally opening public endpoints
-    return false;
+  } catch (error) {
+    console.error('Unexpected error in isFirstStartup:', error);
+    return false; // Default to secure
   }
 }
 

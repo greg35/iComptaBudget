@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.4] - 2026-01-31
+
+### Corrigé
+- Amélioration de la détection du premier démarrage dans le middleware d'authentification pour autoriser la configuration initiale même si une base de données vide existe.
+
 ## [2.1.3] - 2026-01-30
 
 ### Amélioré

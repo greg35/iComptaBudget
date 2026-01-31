@@ -216,13 +216,6 @@ npm run build
 - ✅ **Synchronisation** : Téléchargement automatique depuis Dropbox
 - ✅ **Calculs temps réel** : Montants épargne/dépensé calculés automatiquement
 
-## 🔄 Migration et Refactoring
-
-Cette version inclut un **refactoring complet du backend** :
-- Migration d'un fichier monolithique (1300+ lignes) vers une architecture modulaire
-- Séparation des responsabilités
-- Amélioration de la maintenabilité
-- Conservation de toutes les fonctionnalités existantes
 
 ## 📄 Licence
 
