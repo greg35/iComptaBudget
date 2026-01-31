@@ -38,7 +38,22 @@ async function loadProjectsFromDataDb() {
     const SQL = await initSqlJs();
     const filebuffer = fs.readFileSync(config.DATA_DB_PATH);
     const db = new SQL.Database(filebuffer);
-    const res = db.exec("SELECT id, name, startDate, endDate, plannedBudget, archived FROM projects ORDER BY id ASC");
+    
+    // Check available columns to be resilient to missing migrations
+    let hasArchived = false;
+    try {
+      const schemaRes = db.exec("PRAGMA table_info(projects)");
+      if (schemaRes && schemaRes[0]) {
+        const cols = schemaRes[0].values.map(row => row[1]);
+        hasArchived = cols.includes('archived');
+      }
+    } catch (e) {
+      console.warn('Failed to check table schema, assuming default columns', e);
+    }
+
+    const query = `SELECT id, name, startDate, endDate, plannedBudget${hasArchived ? ', archived' : ''} FROM projects ORDER BY id ASC`;
+    const res = db.exec(query);
+    
     const out = [];
     if (res && res[0]) {
       const cols = res[0].columns;
@@ -51,7 +66,7 @@ async function loadProjectsFromDataDb() {
           startDate: obj.startDate, 
           endDate: obj.endDate, 
           plannedBudget: obj.plannedBudget, 
-          archived: Boolean(obj.archived),
+          archived: hasArchived ? Boolean(obj.archived) : false,
           dbProject: obj.name 
         });
       }

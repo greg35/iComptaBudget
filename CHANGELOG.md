@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.6] - 2026-01-31
+
+### Corrigé
+- Amélioration de la robustesse du chargement des projets : l'application peut désormais lire la liste des projets même si la migration de la base de données (colonne 'archived') a échoué ou n'a pas encore été appliquée.
+
 ## [2.1.5] - 2026-01-31
 
 ### Corrigé
