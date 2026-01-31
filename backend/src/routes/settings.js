@@ -5,7 +5,7 @@ const initSqlJs = require('sql.js');
 const multer = require('multer');
 const config = require('../config');
 const { downloadFile, extractZip } = require('../utils/fileUtils');
-const { syncProjectsFromMainDb } = require('../services/projectService');
+const { syncProjectsFromMainDb, migrateDataDb } = require('../services/projectService');
 
 const router = express.Router();
 
@@ -356,6 +356,15 @@ router.post('/settings/restore', async (req, res) => {
     
     // Restore
     fs.copyFileSync(backupPath, config.DATA_DB_PATH);
+    
+    // Run migrations on the restored database to ensure schema compatibility
+    try {
+      console.log('Running migrations on restored database...');
+      await migrateDataDb();
+    } catch (e) {
+      console.error('Error migrating restored database:', e);
+      // We still return success for the restore itself, but log the error
+    }
     
     res.json({ success: true });
   } catch (error) {

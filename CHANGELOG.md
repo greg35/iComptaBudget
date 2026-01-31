@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.5] - 2026-01-31
+
+### Corrigé
+- Correction de la restauration de sauvegarde : exécution automatique des migrations après la restauration pour s'assurer que le schéma de base de données est compatible avec la version actuelle (évite la liste de projets vide).
+
 ## [2.1.4] - 2026-01-31
 
 ### Corrigé
