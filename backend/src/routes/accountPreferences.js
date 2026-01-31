@@ -37,7 +37,12 @@ router.get('/', async (req, res) => {
     db.close();
     res.json(preferences);
   } catch (e) {
-    console.error('Error loading account preferences:', e && e.message);
+    console.error('Error loading account preferences:', {
+      message: e.message,
+      code: e.code,
+      path: config.DATA_DB_PATH, // Context for the error
+      stack: e.stack
+    });
     res.status(500).json({ error: 'Failed to load account preferences' });
   }
 });

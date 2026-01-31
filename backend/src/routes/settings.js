@@ -17,7 +17,12 @@ function ensureBackupDir() {
       fs.mkdirSync(config.BACKUP_DIR, { recursive: true });
     }
   } catch (error) {
-    console.error('Error ensuring backup directory:', error);
+    console.error(`Error ensuring backup directory '${config.BACKUP_DIR}':`, {
+      message: error.message,
+      code: error.code,
+      path: error.path,
+      stack: error.stack
+    });
     throw error;
   }
 }
@@ -52,6 +57,7 @@ const upload = multer({
     }
   }
 });
+
 
 // First startup detection endpoint
 router.get('/first-startup', async (req, res) => {
@@ -329,7 +335,12 @@ router.get('/settings/backups', async (req, res) => {
       
     res.json(backups);
   } catch (error) {
-    console.error('Error listing backups:', error);
+    console.error('Error listing backups:', {
+      message: error.message,
+      code: error.code,
+      path: error.path,
+      stack: error.stack
+    });
     res.status(500).json({ error: 'Failed to list backups' });
   }
 });

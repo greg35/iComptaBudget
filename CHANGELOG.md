@@ -5,6 +5,11 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.7] - 2026-01-31
+
+### Corrigé
+- Ajout de logs détaillés (code erreur, chemin, stack trace) pour les erreurs de système de fichiers dans les modules de paramètres et de préférences de comptes, afin de faciliter le diagnostic des problèmes de permissions sur le serveur.
+
 ## [2.1.6] - 2026-01-31
 
 ### Corrigé
