@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Settings, Download, ExternalLink, CheckCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { updateAccounts } from "../utils/accountsApi";
-import { apiFetch } from "../utils/apiClient";
+import { apiFetch, apiUrl } from "../utils/apiClient";
 import { VersionInfo } from "./VersionInfo";
 
 interface FirstStartupViewProps {
@@ -80,7 +80,7 @@ export function FirstStartupView({ onComplete }: FirstStartupViewProps) {
 
     try {
       // 1. Upload the backup
-      const uploadResponse = await fetch('/api/settings/import-backup', {
+      const uploadResponse = await fetch(apiUrl('/api/settings/import-backup'), {
         method: 'POST',
         body: formData
       });
@@ -91,7 +91,7 @@ export function FirstStartupView({ onComplete }: FirstStartupViewProps) {
       const filename = uploadData.file.filename;
 
       // 2. Restore the backup
-      const restoreResponse = await fetch('/api/settings/restore', {
+      const restoreResponse = await fetch(apiUrl('/api/settings/restore'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename })

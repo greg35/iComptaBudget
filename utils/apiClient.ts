@@ -65,12 +65,17 @@ export async function apiFetch(path: string, init?: RequestInit) {
   };
   
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    return fetch(path, updatedInit);
+    const response = await fetch(path, updatedInit);
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token');
+      window.location.reload();
+    }
+    return response;
   }
   // Si base contient un sous-chemin et path commence par /api, on concatène: /budget + /api/...
   const url = base && path.startsWith('/api') ? `${base}${path}` : (path.startsWith('/') ? `${base}${path}` : `${base}/${path}`);
   
-  const response = await apiFetch(url, updatedInit);
+  const response = await fetch(url, updatedInit);
   
   // Si la réponse indique que l'authentification a échoué, rediriger vers la page de connexion
   if (response.status === 401) {

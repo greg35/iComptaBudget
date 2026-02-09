@@ -25,7 +25,7 @@ import { AuthProvider, useAuth } from "./components/AuthContext";
 import { LoginForm } from "./components/LoginForm";
 import { toast } from "sonner";
 import { updateAccounts } from "./utils/accountsApi";
-import { apiFetch } from "./utils/apiClient";
+import { apiFetch, apiUrl } from "./utils/apiClient";
 
 // Projects will be loaded from backend at runtime
 // Load savings accounts from backend (accounts under folder 'Disponible')
@@ -65,7 +65,7 @@ function AuthView() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/first-startup');
+        const res = await fetch(apiUrl('/api/first-startup'));
         if (res.ok) {
           const data = await res.json();
           if (mounted) setIsFirstStartup(Boolean(data.isFirstStartup));
@@ -181,7 +181,7 @@ function BudgetAppContent() {
     (async () => {
       try {
         // Use the dedicated first startup detection endpoint
-        const res = await fetch('/api/first-startup');
+        const res = await fetch(apiUrl('/api/first-startup'));
         if (!mounted) return;
 
         if (res.ok) {

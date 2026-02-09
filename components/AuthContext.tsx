@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, apiUrl } from '../utils/apiClient';
 
 interface User {
   id: number;
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const savedToken = localStorage.getItem('auth_token');
       if (savedToken) {
         try {
-          const response = await fetch('/api/auth/verify', {
+          const response = await fetch(apiUrl('/api/auth/verify'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkUser = async (): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/check-user');
+      const response = await fetch(apiUrl('/api/auth/check-user'));
       const data = await response.json();
       return data.hasUser;
     } catch (error) {

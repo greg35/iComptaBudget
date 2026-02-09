@@ -17,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { apiFetch } from "../utils/apiClient";
+import { apiFetch, apiUrl } from "../utils/apiClient";
 import { updateAccounts } from "../utils/accountsApi";
 import { VersionInfo } from "./VersionInfo";
 
@@ -272,6 +272,8 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
       if (response.ok) {
         const data = await response.json();
         setBackups(data);
+      } else {
+        throw new Error('Failed to load backups');
       }
     } catch (error) {
       console.error('Error loading backups:', error);
@@ -319,7 +321,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
       // Use standard fetch here because apiFetch might try to set Content-Type to JSON
       // but FormData needs multipart/form-data boundary which fetch sets automatically
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/settings/import-backup', {
+      const response = await fetch(apiUrl('/api/settings/import-backup'), {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
