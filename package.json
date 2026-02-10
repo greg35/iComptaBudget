@@ -1,6 +1,6 @@
 {
       "name": "icomptabudget",
-      "version": "2.1.9",
+      "version": "2.1.10",
       "private": true,
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
