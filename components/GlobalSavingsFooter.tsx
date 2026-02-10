@@ -12,7 +12,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('fr-FR', { style
 export const GlobalSavingsFooter: React.FC<GlobalSavingsFooterProps> = ({ projects, savingsAccounts }) => {
   const activeProjects = projects.filter(p => !p.archived);
   const totalAccountBalance = savingsAccounts.reduce((sum, a) => sum + (a.balance || 0), 0);
-  const totalProjectSavings = activeProjects.reduce((sum, p) => sum + (p.currentSavings || 0), 0);
+  const totalProjectSavings = activeProjects.reduce((sum, p) => sum + Math.max(0, (p.currentSavings || 0) - (p.currentSpent || 0)), 0);
   const freeBalanceRaw = totalAccountBalance - totalProjectSavings;
   const freeBalance = freeBalanceRaw < 0 ? 0 : freeBalanceRaw;
 

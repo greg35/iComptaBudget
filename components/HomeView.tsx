@@ -18,7 +18,7 @@ export function HomeView({ projects, savingsAccounts }: HomeViewProps) {
   const activeProjects = projects.filter(project => !project.archived);
 
   const totalPlannedBudget = projects.reduce((sum, project) => sum + project.plannedBudget, 0);
-  const totalCurrentSavings = activeProjects.reduce((sum, project) => sum + (project.currentSavings || 0), 0);
+  const totalCurrentSavings = activeProjects.reduce((sum, project) => sum + Math.max(0, (project.currentSavings || 0) - (project.currentSpent || 0)), 0);
   const totalCurrentSpent = projects.reduce((sum, project) => sum + project.currentSpent, 0);
   const totalAccountBalance = savingsAccounts.reduce((sum, account) => sum + account.balance, 0);
   const freeBalance = totalAccountBalance - totalCurrentSavings;

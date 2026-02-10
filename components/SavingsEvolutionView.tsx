@@ -54,7 +54,7 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
     ? _savingsAccounts.reduce((sum: number, account: any) => sum + (Number(account?.balance) || 0), 0)
     : 0;
   const fallbackProjectSavings = Array.isArray(_projects)
-    ? _projects.filter((p: any) => !p.archived).reduce((sum: number, project: any) => sum + (Number(project?.currentSavings) || 0), 0)
+    ? _projects.filter((p: any) => !p.archived).reduce((sum: number, project: any) => sum + Math.max(0, (Number(project?.currentSavings) || 0) - (Number(project?.currentSpent) || 0)), 0)
     : 0;
   const fallbackFreeSavings = Math.max(0, fallbackTotalSavings - fallbackProjectSavings);
 
@@ -212,9 +212,9 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
             cumulativeSavedPerProject.set(key, savedTotal);
             cumulativeSpentPerProject.set(key, spentTotal);
 
-            // L'épargne projet = montant ALLOUÉ (sans soustraire les dépenses)
-            // Les dépenses sont prises sur l'épargne projet, pas sur l'épargne libre
-            let allocated = Math.max(0, savedTotal);
+            // L'épargne projet = montant NET (épargné - dépensé)
+            // Les dépenses sont soustraites de l'épargne projet
+            let allocated = Math.max(0, savedTotal - spentTotal);
             const meta = getProjectMeta(key);
 
             if (!hasProjectStarted(meta, monthKey) || !isProjectActiveForMonth(meta, monthKey)) {
