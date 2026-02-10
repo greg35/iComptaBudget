@@ -143,21 +143,21 @@ async function buildSuggestion(req, res) {
       // 1) Cat IDs si trouvés
       if (catIdVirements || catIdEpargne) {
         const ids = [catIdVirements, catIdEpargne].filter(Boolean).map(id => `'${String(id).replace(/'/g,"''")}'`).join(',');
-        const q1 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND s.category IN (${ids}) AND CAST(s.amount AS REAL) > 0 AND (t.date IS NULL OR t.date < '${currentMonthStart}')`;
+        const q1 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND s.category IN (${ids}) AND CAST(s.amount AS REAL) > 0 AND (t.date IS NULL OR t.date < '${currentMonthStart}') AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')`;
         queriesTried.push(q1);
         const r1 = mainDb.exec(q1);
         if (r1 && r1[0] && r1[0].values[0] && r1[0].values[0][0] != null) saved = Number(r1[0].values[0][0]) || 0;
       }
       // 2) Fallback noms si rien trouvé
       if (saved === 0) {
-        const q2 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICCategory c ON s.category=c.ID LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND CAST(s.amount AS REAL) > 0 AND (lower(c.name) LIKE '%epargne%' OR lower(c.name) LIKE '%épargne%' OR lower(c.name) LIKE '%virements d''épargne%') AND (t.date IS NULL OR t.date < '${currentMonthStart}')`;
+        const q2 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICCategory c ON s.category=c.ID LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND CAST(s.amount AS REAL) > 0 AND (lower(c.name) LIKE '%epargne%' OR lower(c.name) LIKE '%épargne%' OR lower(c.name) LIKE '%virements d''épargne%') AND (t.date IS NULL OR t.date < '${currentMonthStart}') AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')`;
         queriesTried.push(q2);
         const r2 = mainDb.exec(q2);
         if (r2 && r2[0] && r2[0].values[0] && r2[0].values[0][0] != null) saved = Number(r2[0].values[0][0]) || 0;
       }
       // 3) Ultime fallback: considérer tous montants positifs du projet hors provisions/hors budget
       if (saved === 0) {
-        const q3 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICCategory c ON s.category=c.ID LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND CAST(s.amount AS REAL) > 0 AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%') AND (t.date IS NULL OR t.date < '${currentMonthStart}')`;
+        const q3 = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s LEFT JOIN ICCategory c ON s.category=c.ID LEFT JOIN ICTransaction t ON s."transaction" = t.ID WHERE s.project='${escProjectName}' AND CAST(s.amount AS REAL) > 0 AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%') AND (t.date IS NULL OR t.date < '${currentMonthStart}') AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')`;
         queriesTried.push(q3);
         const r3 = mainDb.exec(q3);
         if (r3 && r3[0] && r3[0].values[0] && r3[0].values[0][0] != null) saved = Number(r3[0].values[0][0]) || 0;
@@ -404,14 +404,16 @@ router.get('/project/:projectId/month/:month', async (req, res) => {
                        LEFT JOIN ICTransaction t ON s."transaction" = t.ID
                        WHERE s.project='${escProjectName}'
                          AND s.category IN (${ids})
-                         AND strftime('%Y-%m', t.date)='${monthKey}'`;
+                         AND strftime('%Y-%m', t.date)='${monthKey}'
+                         AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')`;
     } else {
       savingsQuery = `SELECT SUM(CAST(s.amount AS REAL)) FROM ICTransactionSplit s
                        LEFT JOIN ICTransaction t ON s."transaction" = t.ID
                        LEFT JOIN ICCategory c ON s.category = c.ID
                        WHERE s.project='${escProjectName}'
                          AND (lower(c.name) LIKE '%virements d''épargne%' OR lower(c.name)='epargne')
-                         AND strftime('%Y-%m', t.date)='${monthKey}'`;
+                         AND strftime('%Y-%m', t.date)='${monthKey}'
+                         AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')`;
     }
     let actual = 0;
     try {

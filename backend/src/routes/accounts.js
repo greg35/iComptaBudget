@@ -62,7 +62,9 @@ router.get('/', async (req, res) => {
             LEFT JOIN (
               SELECT t.account as accId, SUM(CAST(s.amount AS REAL)) as balance 
               FROM ICTransactionSplit s 
-              LEFT JOIN ICTransaction t ON s."transaction" = t.ID GROUP BY t.account
+              LEFT JOIN ICTransaction t ON s."transaction" = t.ID 
+              WHERE (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
+              GROUP BY t.account
             ) as bal ON a.ID = bal.accId
             where a.hidden = 0 and a."type" IS NOT NULL
           `;

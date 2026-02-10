@@ -124,6 +124,7 @@ router.get('/data', async (req, res) => {
         WHERE
           t.account IN (${accountFilter})
           AND strftime('%Y-%m', t.date) BETWEEN '${startMonth}' AND '${endMonth}'
+          AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
           AND c.name IS NOT NULL
           AND lower(c.name) NOT LIKE '%virements internes%'
           AND c.ID NOT IN (

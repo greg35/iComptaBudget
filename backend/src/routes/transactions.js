@@ -46,7 +46,8 @@ router.get('/', async (req, res) => {
             LEFT JOIN ICTransaction t ON s."transaction" = t.ID
             LEFT JOIN ICCategory c1 ON s.category = c1.ID
                 WHERE s.project = '${String(projectDbName).replace(/'/g, "''")}'
-                    AND (c1.name IS NULL OR (lower(c1.name) NOT LIKE '%provision%' AND lower(c1.name) NOT LIKE '%virements internes%' AND lower(c1.name) NOT LIKE '%virements internes%'))
+                    AND (c1.name IS NULL OR (lower(c1.name) NOT LIKE '%provision%' AND lower(c1.name) NOT LIKE '%virements internes%'))
+                    AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
                 ORDER BY t.date DESC LIMIT 1000`;
       const resq = db.exec(q);
       const out = [];

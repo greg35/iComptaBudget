@@ -317,6 +317,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
           WHERE 
             t.account IN (${accountFilter})
             AND strftime('%Y-%m', t.date) = '${monthKey}'
+            AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
             AND (c.ID IS NULL OR c.ID NOT IN (
               WITH RECURSIVE category_hierarchy AS (
                 SELECT ID, name, parent FROM ICCategory WHERE name = 'Hors budget'
@@ -401,6 +402,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
             WHERE 
               t.account IN (${accountFilter})
               AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
               AND CAST(s.amount AS REAL) < 0
               AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
               and s.project IS NOT NULL
@@ -422,6 +424,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
               AND s.project != ''
               AND t.account IN (${accountFilter})
               AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
               AND CAST(s.amount AS REAL) < 0
               AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
               ${excludeSavingsFilter}
@@ -498,6 +501,7 @@ async function calculateMonthData(db, monthKey, monthLabel, includedAccountIds, 
               AND s.project != ''
               AND CAST(s.amount AS REAL) > 0
               AND strftime('%Y-%m', t.date) = '${monthKey}'
+              AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')
               AND (c.name IS NULL OR lower(c.name) NOT LIKE '%provision%')
             GROUP BY s.project
             HAVING savings > 0

@@ -46,11 +46,17 @@ function computeCurrentSavingsSql(db, projectKey, categoryIds) {
     if (ids.length > 0) {
       // exact match on s.category
       const inList = ids.map(id => "'" + id.replace(/'/g, "''") + "'").join(',');
-      q = "SELECT SUM(CAST(s.amount AS REAL)) as s FROM ICTransactionSplit s WHERE s.project = '" + escProject + "' AND s.category IN (" + inList + ")";
+      q = "SELECT SUM(CAST(s.amount AS REAL)) as s FROM ICTransactionSplit s " +
+          "LEFT JOIN ICTransaction t ON s.\"transaction\" = t.ID " +
+          "WHERE s.project = '" + escProject + "' AND s.category IN (" + inList + ") " +
+          "AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')";
     } else {
       // fallback to name-based heuristic
-      q = "SELECT SUM(CAST(s.amount AS REAL)) as s FROM ICTransactionSplit s LEFT JOIN ICCategory c1 ON s.category = c1.ID " +
-          "WHERE s.project = '" + escProject + "' AND (lower(c1.name) LIKE '%virements d''épargne%' OR lower(c1.name) = 'epargne')";
+      q = "SELECT SUM(CAST(s.amount AS REAL)) as s FROM ICTransactionSplit s " +
+          "LEFT JOIN ICCategory c1 ON s.category = c1.ID " +
+          "LEFT JOIN ICTransaction t ON s.\"transaction\" = t.ID " +
+          "WHERE s.project = '" + escProject + "' AND (lower(c1.name) LIKE '%virements d''épargne%' OR lower(c1.name) = 'epargne') " +
+          "AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')";
     }
     const res = db.exec(q);
     if (res && res[0] && res[0].values && res[0].values[0] && res[0].values[0][0] !== null) {
@@ -84,9 +90,13 @@ function computeCurrentSpentSql(db, projectKey, excludeCategoryIds) {
   try {
     const escProject = String(projectKey).replace(/'/g, "''");
     const ids = (Array.isArray(excludeCategoryIds) ? excludeCategoryIds.filter(Boolean) : []).map(id => String(id));
-    // base filter: negative amounts and not provisions
-    let q = "SELECT SUM(CAST(-s.amount AS REAL)) as spent FROM ICTransactionSplit s LEFT JOIN ICCategory c1 ON s.category = c1.ID " +
-            "WHERE s.project = '" + escProject + "' AND CAST(s.amount AS REAL) < 0 AND (c1.name IS NULL OR lower(c1.name) NOT LIKE '%provision%')";
+    // base filter: negative amounts and not provisions, and NOT planned transactions
+    let q = "SELECT SUM(CAST(-s.amount AS REAL)) as spent FROM ICTransactionSplit s " +
+            "LEFT JOIN ICCategory c1 ON s.category = c1.ID " +
+            "LEFT JOIN ICTransaction t ON s.\"transaction\" = t.ID " +
+            "WHERE s.project = '" + escProject + "' AND CAST(s.amount AS REAL) < 0 " +
+            "AND (c1.name IS NULL OR lower(c1.name) NOT LIKE '%provision%') " +
+            "AND (t.status IS NULL OR t.status <> 'ICTransactionStatus.PlannedStatus')";
     if (ids.length > 0) {
       const inList = ids.map(id => "'" + id.replace(/'/g, "''") + "'").join(',');
       q += " AND (s.category IS NULL OR s.category NOT IN (" + inList + "))";
