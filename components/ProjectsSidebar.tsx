@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Landmark } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Landmark, Bot } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
