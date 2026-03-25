@@ -228,11 +228,8 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
             if (allocated > 0) {
               projectNets[key] = allocated;
               rawProjectSavings += allocated;
-              if (allocated > 0) {
-                projectNets[key] = allocated;
-                rawProjectSavings += allocated;
-              }
-            });
+            }
+          });
 
           const projectSavings = Math.max(0, Math.min(savingsAccountsBalance, rawProjectSavings));
 
@@ -271,7 +268,6 @@ export const SavingsEvolutionView: React.FC<SavingsEvolutionViewProps> = ({
       fetchEvolutionData();
     }
   }, [periodMonths, startDate, endDate, customPeriod, getProjectMeta, hasProjectStarted, isProjectActiveForMonth]);
-}, [periodMonths, startDate, endDate, customPeriod, getProjectMeta, hasProjectStarted, isProjectActiveForMonth]);
 
 const formatMonth = (monthKey: string) => {
   const [year, month] = monthKey.split('-');
@@ -290,8 +286,6 @@ const formatCurrency = (value: number) => {
 const currentMonth = evolutionData[evolutionData.length - 1];
 const previousMonth = evolutionData[evolutionData.length - 2];
 const totalEvolution = currentMonth && previousMonth
-  ? currentMonth.totalSavings - previousMonth.totalSavings
-  const totalEvolution = currentMonth && previousMonth
   ? currentMonth.totalSavings - previousMonth.totalSavings
   : 0;
 
@@ -327,38 +321,7 @@ const chartData = React.useMemo(() => {
     };
   });
 }, [evolutionData, fallbackProjectSavings]);
-// Pour le mois actuel, utiliser toujours les vraies valeurs (fallback) au lieu du calcul historique
-// car le calcul historique peut être incomplet ou décalé
-const today = new Date();
-const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-const isCurrentMonthDisplayed = currentMonth && currentMonth.month === currentMonthKey;
-
-const displayedTotalSavings = isCurrentMonthDisplayed ? fallbackTotalSavings : (currentMonth ? currentMonth.totalSavings : fallbackTotalSavings);
-const displayedProjectSavings = isCurrentMonthDisplayed ? fallbackProjectSavings : (currentMonth ? currentMonth.projectSavings : fallbackProjectSavings);
-const displayedFreeSavings = isCurrentMonthDisplayed ? fallbackFreeSavings : (currentMonth ? currentMonth.freeSavings : fallbackFreeSavings);
-
-// Utiliser les vraies valeurs actuelles pour TOUS les mois
-// car nous ne pouvons pas calculer historiquement l'épargne projet correctement
-// L'épargne projet est basée sur currentSavings des projets actifs (valeur actuelle)
-// Ce qui varie dans le temps est le solde total des comptes d'épargne
-const chartData = React.useMemo(() => {
-  if (evolutionData.length === 0) return [];
-
-  return evolutionData.map((data) => {
-    // Pour tous les mois : garder le solde des comptes qui varie
-    // mais utiliser l'épargne projet actuelle (currentSavings des projets actifs)
-    const totalSavings = data.totalSavings; // Solde des comptes pour ce mois (historique)
-    const projectSavings = Math.min(totalSavings, fallbackProjectSavings); // Épargne projet actuelle, plafonnée au solde
-    const freeSavings = Math.max(0, totalSavings - projectSavings);
-
-    return {
-      ...data,
-      totalSavings,
-      projectSavings,
-      freeSavings
-    };
-  });
-}, [evolutionData, fallbackProjectSavings]);
+// (Removed duplicated chartData block)
 
 const averageMonthlySavings = evolutionData.length > 0
   ? evolutionData.reduce((sum, data) => sum + data.monthlySavings, 0) / evolutionData.length
@@ -539,7 +502,6 @@ return (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={chartData}
                 data={chartData}
                 margin={{ top: 16, right: 32, bottom: 48, left: 0 }}
               >

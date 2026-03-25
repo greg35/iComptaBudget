@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from "react-router-dom";
-import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from "react-router-dom";
 import { Project, Transaction, MonthlyData, SavingsAccount, ViewType } from "./types/budget";
 import { ProjectsSidebar } from "./components/ProjectsSidebar";
 import { ProjectHeader } from "./components/ProjectHeader";
@@ -14,7 +13,6 @@ import { MonthlySavingsView } from "./components/MonthlySavingsView";
 import { SavingsPerMonth } from "./components/SavingsPerMonth";
 import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
 import { SavingsEvolutionView } from "./components/SavingsEvolutionView";
-import { CategoryMatrixView } from "./components/CategoryMatrixView";
 import { CategoryMatrixView } from "./components/CategoryMatrixView";
 import { FirstStartupView } from "./components/FirstStartupView";
 import { SidebarProvider } from "./components/ui/sidebar";
@@ -288,14 +286,12 @@ function BudgetAppContent() {
           // (description commence par "VIR Epargne" ET isManual = true)
           const manualAllocations = transactions
             .filter((t: any) =>
-              t.type === 'income' &&
-            .filter((t: any) =>
                 t.type === 'income' &&
                 t.category === "Virements d'épargne" &&
                 t.description && t.description.startsWith('VIR Epargne') &&
                 t.isManual === true // Exclure les vraies transactions iCompta déjà comptées
               )
-                .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
+            .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
           currentSavings += manualAllocations;
         }
       } catch (e) {
@@ -304,7 +300,6 @@ function BudgetAppContent() {
 
       // Mettre à jour le projet dans l'état local
       setProjects(prev => prev.map(p =>
-        setProjects(prev => prev.map(p =>
           p.id === projectId ? { ...p, currentSavings } : p
         ));
     } catch (e) {
@@ -395,11 +390,6 @@ function BudgetAppContent() {
     // Fallback to the project id when dbProject is not set.
     //const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
     const projectKey = selectedProjectId;
-    const currentProject = projects.find(p => p.id === selectedProjectId);
-    // Use the DB project key (dbProject) when available — this matches ICTransactionSplit.project values
-    // Fallback to the project id when dbProject is not set.
-    //const projectKey = currentProject && currentProject.dbProject ? currentProject.dbProject : (currentProject && currentProject.id ? currentProject.id : selectedProjectId);
-    const projectKey = selectedProjectId;
     (async () => {
       try {
         const res = await apiFetch(`/api/transactions?project=${encodeURIComponent(projectKey)}`);
@@ -421,7 +411,6 @@ function BudgetAppContent() {
           type: t.type || (((t.category || '') === 'Virements d\'épargne' || (t.category || '') === "Virements d'épargne") ? 'income' : 'expense'),
           category: t.category || ''
         }));
-        setProjectTransactions(filtered);
         setProjectTransactions(filtered);
       } catch (e: any) {
         console.error('could not load project transactions', e);
@@ -458,8 +447,6 @@ function BudgetAppContent() {
     const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
     const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
     // monthly sums (not cumulative yet)
     const monthly = new Map();
     for (const t of txs) {
@@ -511,13 +498,13 @@ function BudgetAppContent() {
       "bank-fees": "/bank-fees",
       "calendar": "/calendar",
       "day-detail": "/calendar", // Default to calendar root
+      assistant: "/assistant",
       project: "/home", // Fallback, normalement on utilise handleProjectSelect
     };
     navigate(routes[view] || "/home");
   };
 
   const handleProjectSelect = (projectId: string) => {
-    navigate(`/project/${projectId}`);
     navigate(`/project/${projectId}`);
   };
 
@@ -531,18 +518,16 @@ function BudgetAppContent() {
           plannedBudget: Number(projectData.plannedBudget || 0) || 0
         };
         const res = await apiFetch('/api/projects', {
-          const res = await apiFetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          if(!res.ok) throw new Error('failed to create project');
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('failed to create project');
         const data = await res.json();
         const proj = (data && data.project) ? data.project : null;
         let normalizedProject: Project;
         if (proj) {
           normalizedProject = {
-            id: String(proj.id ?? Math.random().toString(36).substr(2, 9)),
             id: String(proj.id ?? Math.random().toString(36).substr(2, 9)),
             name: proj.name || projectData.name,
             startDate: proj.startDate || projectData.startDate || '',
@@ -567,7 +552,6 @@ function BudgetAppContent() {
         }
         setProjects(prev => [...prev, normalizedProject]);
         navigate(`/project/${normalizedProject.id}`);
-        navigate(`/project/${normalizedProject.id}`);
         toast.success(`Projet "${normalizedProject.name}" créé et sauvegardé.`);
       } catch (e: any) {
         console.error('failed to create project on server', e);
@@ -586,43 +570,37 @@ function BudgetAppContent() {
     try {
       // Call backend to update archived state
       const response = await apiFetch(`/api/projects/${projectId}`, {
-        const response = await apiFetch(`/api/projects/${projectId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ archived: newArchivedState }),
-        });
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archived: newArchivedState }),
+      });
 
-        if(!response.ok) {
-          const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
       const result = await response.json();
 
-
-    // Update local state with the response from server
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
-          ? { ...p, archived: result.project?.archived ?? newArchivedState }
+      // Update local state with the response from server
+      setProjects((prev) =>
+        prev.map((p) =>
           p.id === projectId
-          ? { ...p, archived: result.project?.archived ?? newArchivedState }
-          : p
-      )
-    );
+            ? { ...p, archived: result.project?.archived ?? newArchivedState }
+            : p
+        )
+      );
 
     toast.success(
       newArchivedState
-        newArchivedState
         ? `Projet "${project.name}" archivé avec succès !`
         : `Projet "${project.name}" désarchivé avec succès !`
     );
 
     // Si le projet archivé était sélectionné, retourner à l'accueil
     if (newArchivedState && selectedProjectId === projectId) {
-      navigate("/home");
       navigate("/home");
     }
   } catch (error) {
@@ -638,19 +616,18 @@ const handleDeleteProject = async (projectId: string) => {
   try {
     // Call backend to delete project
     const response = await apiFetch(`/api/projects/${projectId}`, {
-      const response = await apiFetch(`/api/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if(!response.ok) {
-        const errorText = await response.text();
-    throw new Error(`HTTP ${response.status}: ${errorText}`);
-  }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
 
-      const result = await response.json();
+    const result = await response.json();
 
 
   // Update local state - remove the project
@@ -661,7 +638,6 @@ const handleDeleteProject = async (projectId: string) => {
 
   // Si le projet supprimé était sélectionné, retourner à l'accueil
   if (selectedProjectId === projectId) {
-    navigate("/home");
     navigate("/home");
   }
 } catch (error) {
@@ -709,23 +685,21 @@ const handleUpdateProject = async (
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
 
       const response = await apiFetch('/api/saving-goals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId,
+          amount: updates.monthlySavingsTarget,
+          startDate: currentMonth,
+          reason: 'Modification manuelle depuis le tableau des projets',
+        }),
+      });
 
-        const response = await apiFetch('/api/saving-goals', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            projectId,
-            amount: updates.monthlySavingsTarget,
-            startDate: currentMonth,
-            reason: 'Modification manuelle depuis le tableau des projets',
-          }),
-        });
-
-        if(!response.ok) {
-          throw new Error('Erreur lors de la sauvegarde de l\'objectif d\'épargne');
-    }
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde de l\'objectif d\'épargne');
+      }
 
         console.log('Objectif d\'épargne mensuel sauvegardé:', updates.monthlySavingsTarget);
   } catch (error) {
@@ -864,24 +838,14 @@ return (
 
 // Wrapper avec React Router pour gérer les URLs
 function AppWithRouter() {
-  // Wrapper avec React Router pour gérer les URLs
-  function AppWithRouter() {
-    return (
+  return (
     <BrowserRouter>
       <AuthProvider>
         <MainApp />
       </AuthProvider>
     </BrowserRouter>
-    <BrowserRouter>
-      <AuthProvider>
-        <MainApp />
-      </AuthProvider>
-    </BrowserRouter>
-    );
-  }
+  );
+}
 
-  // Composant racine
-  export default AppWithRouter;
-
-  // Composant racine
-  export default AppWithRouter;
+// Composant racine
+export default AppWithRouter;
