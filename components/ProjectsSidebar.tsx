@@ -1,7 +1,7 @@
 import { Project, ViewType } from "../types/budget";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
-import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Bot } from "lucide-react";
+import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Landmark } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Separator } from "./ui/separator";
@@ -92,6 +92,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
+              onClick={() => onViewChange('calendar')}
+              isActive={currentView === 'calendar' || currentView === 'day-detail'}
+              className="w-full"
+            >
+              <Calendar className="h-4 w-4" />
+              <span>Calendrier</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
               onClick={() => onViewChange('monthly-savings')}
               isActive={currentView === 'monthly-savings'}
               className="w-full"
@@ -138,6 +148,16 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
             >
               <Grid3x3 className="h-4 w-4" />
               <span>Dépenses par catégorie</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => onViewChange('bank-fees')}
+              isActive={currentView === 'bank-fees'}
+              className="w-full"
+            >
+              <Landmark className="h-4 w-4" />
+              <span>Suivi Frais Bancaire</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

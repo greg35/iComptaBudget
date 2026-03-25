@@ -358,4 +358,120 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Bank fees and cashback (yearly)
+router.get('/bank-fees', async (req, res) => {
+  try {
+    if (!fs.existsSync(config.DB_PATH)) {
+      return res.json([]);
+    }
+
+    const year = req.query.year || new Date().getFullYear();
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+
+    const db = await openDb(config.DB_PATH);
+    try {
+      // Find matching Transaction IDs for the year
+      // We look for category matching 'frais bancaire' OR description/comment with '*1630'
+      const idQuery = `
+        SELECT DISTINCT t.ID
+        FROM ICTransaction t
+        LEFT JOIN ICTransactionSplit s ON s."transaction" = t.ID
+        LEFT JOIN ICCategory c1 ON s.category = c1.ID
+        WHERE COALESCE(t.date, t.valueDate, '') >= '${startDate}'
+          AND COALESCE(t.date, t.valueDate, '') <= '${endDate}'
+          AND (
+            lower(c1.name) LIKE '%frais bancaire%'
+            OR lower(t.name) LIKE '%*1630%'
+            OR lower(s.comment) LIKE '%*1630%'
+          )
+      `;
+
+      const idRes = db.exec(idQuery);
+      const transactionIds = [];
+      if (idRes && idRes[0]) {
+        idRes[0].values.forEach(row => transactionIds.push(row[0]));
+      }
+
+      const out = [];
+
+      if (transactionIds.length > 0) {
+        const idsString = transactionIds.map(id => `'${String(id).replace(/'/g, "''")}'`).join(',');
+        const detailsQuery = `
+          SELECT s.ID as splitId, s.amount as amount, s.project as project, 
+                 COALESCE(t.date, t.valueDate, '') as txDate, t.name as txName, 
+                 c1.name as splitCategoryName, s.comment as splitComment,
+                 t.account as accountId, t.ID as transactionId
+          FROM ICTransactionSplit s
+          LEFT JOIN ICTransaction t ON s."transaction" = t.ID
+          LEFT JOIN ICCategory c1 ON s.category = c1.ID
+          WHERE t.ID IN (${idsString})
+          ORDER BY t.date DESC
+        `;
+
+        const resq = db.exec(detailsQuery);
+
+        if (resq && resq[0]) {
+          const cols = resq[0].columns;
+          const rows = resq[0].values;
+
+          const txMap = new Map();
+
+          rows.forEach(row => {
+            const obj = {};
+            cols.forEach((c, i) => obj[c] = row[i]);
+
+            const txId = obj.transactionId;
+            if (!txMap.has(txId)) {
+              txMap.set(txId, {
+                id: txId,
+                date: obj.txDate || null,
+                description: obj.txName || '',
+                accountId: obj.accountId,
+                splits: [],
+                amount: 0
+              });
+            }
+
+            const tx = txMap.get(txId);
+            const amount = obj.amount == null ? 0 : Number(obj.amount);
+
+            tx.splits.push({
+              id: String(obj.splitId || ''),
+              amount: amount,
+              category: obj.splitCategoryName || null,
+              comment: obj.splitComment || '',
+              project: obj.project
+            });
+
+            tx.amount += amount;
+          });
+
+          txMap.forEach(tx => {
+            tx.type = tx.amount >= 0 ? 'income' : 'expense';
+            // Determine if it's bank fee or cashback
+            // Check categories inside splits for Bank Fee
+            tx.isBankFee = tx.splits.some(s => s.category && s.category.toLowerCase().includes('frais bancaire'));
+            
+            // Check descriptions/comments for cashback (*1630)
+            const hasCashbackDesc = tx.description.toLowerCase().includes('*1630');
+            const hasCashbackComment = tx.splits.some(s => s.comment && s.comment.toLowerCase().includes('*1630'));
+            tx.isCashback = hasCashbackDesc || hasCashbackComment;
+
+            out.push(tx);
+          });
+        }
+      }
+
+      // We do not need to add manual transactions here as they are unlikely to be bank fees or card operations
+      res.json(out);
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    console.error('Error fetching bank fees transactions:', e && e.message);
+    res.status(500).json({ error: 'Failed to fetch bank fees transactions' });
+  }
+});
+
 module.exports = router;
