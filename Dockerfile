@@ -1,5 +1,5 @@
 # Multi-stage build pour iComptaBudget
-FROM node:18-alpine AS base
+FROM node:25.8.2-alpine AS base
 
 # Installer les dépendances système
 RUN apk add --no-cache libc6-compat sqlite
