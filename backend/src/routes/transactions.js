@@ -458,6 +458,12 @@ router.get('/bank-fees', async (req, res) => {
             const hasCashbackComment = tx.splits.some(s => s.comment && s.comment.toLowerCase().includes('*1630'));
             tx.isCashback = hasCashbackDesc || hasCashbackComment;
 
+            // Check if foreign currency (Devise / Etranger)
+            const descLower = tx.description.toLowerCase();
+            const hasDeviseDesc = descLower.includes('devise') || descLower.includes('etranger') || descLower.includes('étranger');
+            const hasDeviseComment = tx.splits.some(s => s.comment && (s.comment.toLowerCase().includes('devise') || s.comment.toLowerCase().includes('etranger') || s.comment.toLowerCase().includes('étranger')));
+            tx.isForeignCurrency = hasDeviseDesc || hasDeviseComment;
+
             out.push(tx);
           });
         }
