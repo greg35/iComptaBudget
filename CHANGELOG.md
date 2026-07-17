@@ -5,6 +5,13 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.14] - 2026-07-18
+
+### Corrigé
+- Ajout d'un bouton de menu visible sur mobile pour ouvrir la navigation depuis toutes les vues, y compris la page d'accueil.
+- Fermeture automatique du menu mobile après la sélection d'une vue ou d'un projet.
+- Ajustement de l'espacement du contenu sur les petits écrans afin que le bouton de navigation ne masque pas les informations.
+
 ## [2.1.13] - 2026-07-18
 
 ### Corrigé

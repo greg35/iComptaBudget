@@ -15,7 +15,7 @@ import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionVie
 import { SavingsEvolutionView } from "./components/SavingsEvolutionView";
 import { CategoryMatrixView } from "./components/CategoryMatrixView";
 import { FirstStartupView } from "./components/FirstStartupView";
-import { SidebarProvider } from "./components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { ProjectsTableView } from "./components/ProjectsTableView";
@@ -756,7 +756,12 @@ return (
           isUpdatingAccounts={isUpdatingAccounts}
         />
 
-        <main className={`flex-1 p-6 space-y-6 flex flex-col ${(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'transactions-list') ? 'pb-28' : ''}`}>
+        <main className={`min-w-0 flex-1 p-4 pt-16 sm:p-6 sm:pt-6 space-y-6 flex flex-col ${(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'transactions-list') ? 'pb-28' : ''}`}>
+          <SidebarTrigger
+            className="fixed right-4 top-4 z-40 size-10 border bg-background shadow-sm md:hidden"
+            aria-label="Ouvrir le menu de navigation"
+            title="Ouvrir le menu"
+          />
           {currentView === "home" ? (
             <HomeView
               projects={projects}

@@ -1,5 +1,5 @@
 import { Project, ViewType } from "../types/budget";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "./ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, useSidebar } from "./ui/sidebar";
 import { CreateProjectForm } from "./CreateProjectForm";
 import { Folder, Plus, Home, Settings, TrendingUp, Calendar, RotateCw, TableProperties, BarChart3, LogOut, Grid3x3, List, Landmark, Bot } from "lucide-react";
 import { Button } from "./ui/button";
@@ -25,6 +25,21 @@ interface ProjectsSidebarProps {
 export function ProjectsSidebar({ projects, selectedProjectId, currentView, showActiveOnly, onProjectSelect, onViewChange, onCreateProject, onShowActiveOnlyChange, onUpdateAccounts, isUpdatingAccounts }: ProjectsSidebarProps) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const { logout, user } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobileMenu = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
+  const handleViewChange = (view: ViewType) => {
+    onViewChange(view);
+    closeMobileMenu();
+  };
+
+  const handleProjectSelect = (projectId: string) => {
+    onProjectSelect(projectId);
+    closeMobileMenu();
+  };
 
   const handleLogout = () => {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
@@ -62,7 +77,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
         <SidebarMenu className="mb-4">
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('home')}
+              onClick={() => handleViewChange('home')}
               isActive={currentView === 'home'}
               className="w-full"
             >
@@ -72,7 +87,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('projects-table')}
+              onClick={() => handleViewChange('projects-table')}
               isActive={currentView === 'projects-table'}
               className="w-full"
             >
@@ -82,7 +97,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('transactions-list')}
+              onClick={() => handleViewChange('transactions-list')}
               isActive={currentView === 'transactions-list'}
               className="w-full"
             >
@@ -92,7 +107,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('calendar')}
+              onClick={() => handleViewChange('calendar')}
               isActive={currentView === 'calendar' || currentView === 'day-detail'}
               className="w-full"
             >
@@ -102,7 +117,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('monthly-savings')}
+              onClick={() => handleViewChange('monthly-savings')}
               isActive={currentView === 'monthly-savings'}
               className="w-full"
             >
@@ -112,7 +127,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('month-breakdown')}
+              onClick={() => handleViewChange('month-breakdown')}
               isActive={currentView === 'month-breakdown'}
               className="w-full"
             >
@@ -122,7 +137,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('projection-epargne')}
+              onClick={() => handleViewChange('projection-epargne')}
               isActive={currentView === 'projection-epargne'}
               className="w-full"
             >
@@ -132,7 +147,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('savings-evolution')}
+              onClick={() => handleViewChange('savings-evolution')}
               isActive={currentView === 'savings-evolution'}
               className="w-full"
             >
@@ -142,7 +157,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('category-matrix')}
+              onClick={() => handleViewChange('category-matrix')}
               isActive={currentView === 'category-matrix'}
               className="w-full"
             >
@@ -152,7 +167,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('bank-fees')}
+              onClick={() => handleViewChange('bank-fees')}
               isActive={currentView === 'bank-fees'}
               className="w-full"
             >
@@ -162,7 +177,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('settings')}
+              onClick={() => handleViewChange('settings')}
               isActive={currentView === 'settings'}
               className="w-full"
             >
@@ -172,7 +187,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onViewChange('assistant')}
+              onClick={() => handleViewChange('assistant')}
               isActive={currentView === 'assistant'}
               className="w-full"
             >
@@ -194,7 +209,7 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           {visible.map((project) => (
             <SidebarMenuItem key={project.id}>
               <SidebarMenuButton
-                onClick={() => onProjectSelect(project.id)}
+                onClick={() => handleProjectSelect(project.id)}
                 isActive={selectedProjectId === project.id}
                 className="w-full"
               >
