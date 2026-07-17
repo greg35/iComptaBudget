@@ -5,6 +5,12 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.12] - 2026-07-17
+
+### Corrigé
+- Correction de la navigation vers l'assistant IA, qui redirigeait auparavant vers l'écran d'accueil.
+- Rétablissement de l'affichage de la vue de conversation de l'assistant IA.
+
 ## [2.1.11] - 2026-07-17
 
 ### Ajouté

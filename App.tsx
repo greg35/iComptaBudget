@@ -23,6 +23,7 @@ import { AllTransactionsView } from "./components/AllTransactionsView";
 import { CalendarView } from "./components/CalendarView";
 import { DayDetailView } from "./components/DayDetailView";
 import { BankFeesView } from "./components/BankFeesView";
+import { AssistantView } from "./components/AssistantView";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { LoginForm } from "./components/LoginForm";
 import { toast } from "sonner";
@@ -141,6 +142,7 @@ function BudgetApp() {
       <Route path="/projects-table" element={<BudgetAppContent />} />
       <Route path="/transactions" element={<BudgetAppContent />} />
       <Route path="/bank-fees" element={<BudgetAppContent />} />
+      <Route path="/assistant" element={<BudgetAppContent />} />
       <Route path="/calendar" element={<BudgetAppContent />} />
       <Route path="/calendar/:date" element={<BudgetAppContent />} />
       <Route path="/project/:projectId" element={<BudgetAppContent />} />
@@ -167,6 +169,7 @@ function BudgetAppContent() {
                   location === "/projects-table" ? "projects-table" :
                     location === "/transactions" ? "transactions-list" :
                       location === "/bank-fees" ? "bank-fees" :
+                        location === "/assistant" ? "assistant" :
                         location === "/calendar" ? "calendar" :
                           location.startsWith("/calendar/") ? "day-detail" :
                             location.startsWith("/project/") ? "project" :
@@ -796,6 +799,8 @@ return (
             />
           ) : currentView === "bank-fees" ? (
             <BankFeesView />
+          ) : currentView === "assistant" ? (
+            <AssistantView />
           ) : currentView === "transactions-list" ? (
             <AllTransactionsView />
           ) : currentView === "calendar" ? (
