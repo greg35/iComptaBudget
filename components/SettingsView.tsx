@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Settings, Save, Check, Download, RefreshCw, Users, Trash2, History, RotateCcw, Upload } from "lucide-react";
 import {
   AlertDialog,
@@ -234,9 +235,11 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     }
   };
 
+  const [llmProvider, setLlmProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
-  const [isEditingApiKey, setIsEditingApiKey] = useState(false);
-  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [openRouterModel, setOpenRouterModel] = useState('openai/gpt-4o');
+  const [isEditingLlmSettings, setIsEditingLlmSettings] = useState(false);
+  const [isSavingLlmSettings, setIsSavingLlmSettings] = useState(false);
 
   // Backup state
   const [backups, setBackups] = useState<Backup[]>([]);
@@ -256,9 +259,9 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
       const response = await apiFetch('/api/settings');
       if (response.ok) {
         const settings = await response.json();
-        if (settings.openai_api_key) {
-          setApiKey(settings.openai_api_key);
-        }
+        setLlmProvider(settings.llm_provider || 'openai');
+        setApiKey(settings.openai_api_key || settings.llm_api_key || '');
+        setOpenRouterModel(settings.openrouter_model || 'openai/gpt-4o');
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -417,26 +420,34 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
     return new Date(dateString).toLocaleString();
   };
 
-  const handleSaveApiKey = async () => {
-    setIsSavingApiKey(true);
-    try {
-      const response = await apiFetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'openai_api_key', value: apiKey })
-      });
+  const saveSetting = async (key: string, value: string) => {
+    const response = await apiFetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
 
-      if (response.ok) {
-        toast.success("Clé API OpenAI sauvegardée !");
-        setIsEditingApiKey(false);
-      } else {
-        throw new Error('Failed to save API key');
-      }
+    if (!response.ok) {
+      throw new Error(`Failed to save setting ${key}`);
+    }
+  };
+
+  const handleSaveLlmSettings = async () => {
+    setIsSavingLlmSettings(true);
+    try {
+      await Promise.all([
+        saveSetting('llm_provider', llmProvider),
+        saveSetting('openai_api_key', apiKey),
+        saveSetting('openrouter_model', openRouterModel)
+      ]);
+
+      toast.success("Paramètres IA sauvegardés !");
+      setIsEditingLlmSettings(false);
     } catch (error) {
-      console.error('Error saving API key:', error);
-      toast.error("Erreur lors de la sauvegarde de la clé API");
+      console.error('Error saving LLM settings:', error);
+      toast.error("Erreur lors de la sauvegarde des paramètres IA");
     } finally {
-      setIsSavingApiKey(false);
+      setIsSavingLlmSettings(false);
     }
   };
 
@@ -456,25 +467,58 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
         <CardHeader>
           <CardTitle>Assistant IA</CardTitle>
           <CardDescription>
-            Configurez votre clé API OpenAI pour utiliser l'assistant
+            Configurez le fournisseur LLM, la clé API et le modèle utilisés par l'assistant
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="llm-provider">Fournisseur LLM</Label>
+              <Select
+                value={llmProvider}
+                onValueChange={setLlmProvider}
+                disabled={!isEditingLlmSettings}
+              >
+                <SelectTrigger id="llm-provider" className={isEditingLlmSettings ? "" : "bg-muted"}>
+                  <SelectValue placeholder="Choisir un fournisseur" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {llmProvider === 'openrouter' && (
+              <div className="space-y-2">
+                <Label htmlFor="openrouter-model">Modèle OpenRouter</Label>
+                <Input
+                  id="openrouter-model"
+                  value={openRouterModel}
+                  onChange={(e) => setOpenRouterModel(e.target.value)}
+                  placeholder="openai/gpt-4o"
+                  disabled={!isEditingLlmSettings}
+                  className={isEditingLlmSettings ? "" : "bg-muted"}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="openai-api-key">Clé API OpenAI</Label>
+            <Label htmlFor="llm-api-key">Clé API {llmProvider === 'openrouter' ? 'OpenRouter' : 'OpenAI'}</Label>
             <div className="flex gap-2">
               <Input
-                id="openai-api-key"
+                id="llm-api-key"
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                disabled={!isEditingApiKey}
-                className={isEditingApiKey ? "" : "bg-muted"}
+                placeholder={llmProvider === 'openrouter' ? 'sk-or-...' : 'sk-...'}
+                disabled={!isEditingLlmSettings}
+                className={isEditingLlmSettings ? "" : "bg-muted"}
               />
-              {!isEditingApiKey ? (
+              {!isEditingLlmSettings ? (
                 <Button
-                  onClick={() => setIsEditingApiKey(true)}
+                  onClick={() => setIsEditingLlmSettings(true)}
                   variant="outline"
                   size="sm"
                 >
@@ -483,17 +527,17 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
               ) : (
                 <div className="flex gap-2">
                   <Button
-                    onClick={handleSaveApiKey}
+                    onClick={handleSaveLlmSettings}
                     size="sm"
-                    disabled={isSavingApiKey}
+                    disabled={isSavingLlmSettings}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Check className="h-4 w-4 mr-1" />
-                    {isSavingApiKey ? 'Sauvegarde...' : 'Sauvegarder'}
+                    {isSavingLlmSettings ? 'Sauvegarde...' : 'Sauvegarder'}
                   </Button>
                   <Button
                     onClick={() => {
-                      setIsEditingApiKey(false);
+                      setIsEditingLlmSettings(false);
                       loadSettings(); // Reload to reset changes
                     }}
                     variant="outline"
@@ -505,7 +549,7 @@ export function SettingsView({ dropboxUrl, onUpdateDropboxUrl }: SettingsViewPro
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Votre clé API est stockée localement dans votre base de données.
+              Votre clé API et le modèle choisi sont stockés localement dans votre base de données.
             </p>
           </div>
         </CardContent>

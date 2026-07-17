@@ -39,31 +39,40 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Step 0: Get API Key from DB
+    // Step 0: Get LLM settings from DB
     if (!fs.existsSync(config.DATA_DB_PATH)) {
       return res.status(500).json({ error: 'Database not found' });
     }
 
     const settingsDb = await openDb(config.DATA_DB_PATH);
+    let llmProvider = 'openai';
     let apiKey = null;
+    let openRouterModel = 'openai/gpt-4o';
     try {
-      const result = settingsDb.exec("SELECT value FROM settings WHERE key = 'openai_api_key'");
+      const result = settingsDb.exec("SELECT key, value FROM settings WHERE key IN ('llm_provider', 'openai_api_key', 'openrouter_model')");
       if (result && result[0] && result[0].values.length > 0) {
-        apiKey = result[0].values[0][0];
+        for (const [key, value] of result[0].values) {
+          if (key === 'llm_provider') llmProvider = value || 'openai';
+          if (key === 'openai_api_key') apiKey = value;
+          if (key === 'openrouter_model') openRouterModel = value || 'openai/gpt-4o';
+        }
       }
     } catch (e) {
-      console.error('Error fetching API key:', e);
+      console.error('Error fetching LLM settings:', e);
     } finally {
       settingsDb.close();
     }
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'OpenAI API key not configured in settings' });
+      return res.status(500).json({ error: 'LLM API key not configured in settings' });
     }
 
-    const openai = new OpenAI({
+    const isOpenRouter = llmProvider === 'openrouter';
+    const llmClient = new OpenAI({
       apiKey: apiKey,
+      ...(isOpenRouter ? { baseURL: 'https://openrouter.ai/api/v1' } : {}),
     });
+    const llmModel = isOpenRouter ? openRouterModel : 'gpt-4o';
 
     // Step 0.5: Fetch all categories to help the LLM
     let categories = [];
@@ -109,8 +118,8 @@ router.post('/chat', async (req, res) => {
     14. When filtering by category, use the EXACT name from the "Available Categories" list. Use LIKE if you are unsure but prefer exact matches.
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const completion = await llmClient.chat.completions.create({
+      model: llmModel,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: message },
@@ -190,8 +199,8 @@ router.post('/chat', async (req, res) => {
     For charts, ensure the data has clear keys (e.g. "name", "value").
     `;
 
-    const interpretation = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const interpretation = await llmClient.chat.completions.create({
+      model: llmModel,
       messages: [
         { role: "system", content: "You are a helpful assistant that outputs JSON." },
         { role: "user", content: interpretationPrompt },
