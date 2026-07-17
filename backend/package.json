@@ -1,9 +1,10 @@
 {
   "name": "icompta-backend",
-  "version": "2.1.7",
+  "version": "2.1.13",
   "private": true,
   "main": "index.js",
   "scripts": {
+    "test": "node --test src/**/*.test.js",
     "dev-mode:on": "node dev-mode.js on",
     "dev-mode:off": "node dev-mode.js off",
     "dev-mode:status": "node dev-mode.js status"

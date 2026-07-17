@@ -5,6 +5,15 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.13] - 2026-07-18
+
+### Corrigé
+- Transmission à l'assistant IA du schéma réel de la base, des comptes, des catégories et de la période couverte par les transactions.
+- Utilisation correcte des montants issus des ventilations de transactions pour les calculs de revenus, dépenses et solde net.
+- Prise en compte des transactions manuelles et des synthèses mensuelles récentes dans le contexte financier.
+- Nouvelle tentative automatique lorsqu'un fournisseur LLM génère une requête SQL incompatible avec la base.
+- Conservation de l'ensemble des résultats utiles lors de l'interprétation de la réponse.
+
 ## [2.1.12] - 2026-07-17
 
 ### Corrigé
