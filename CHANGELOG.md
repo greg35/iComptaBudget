@@ -5,6 +5,16 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.11] - 2026-07-17
+
+### Ajouté
+- Choix du fournisseur LLM utilisé par l'assistant IA entre OpenAI et OpenRouter.
+- Configuration du modèle à utiliser lorsque le fournisseur OpenRouter est sélectionné.
+
+### Modifié
+- Enregistrement du fournisseur, de la clé API et du modèle OpenRouter dans les paramètres locaux.
+- Routage des appels de l'assistant vers l'API compatible OpenRouter avec le modèle configuré.
+
 ## [2.1.7] - 2026-01-31
 
 ### Corrigé
