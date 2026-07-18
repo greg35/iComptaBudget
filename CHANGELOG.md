@@ -5,6 +5,31 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.2.0] - 2026-07-18
+
+### Ajouté
+- Gestion de plusieurs discussions avec l'assistant IA dans des onglets indépendants, jusqu'à 10 conversations simultanées par utilisateur.
+- Possibilité de créer, renommer et fermer chaque onglet de discussion.
+- Conservation en base de données de l'historique complet des demandes, réponses, tableaux et graphiques.
+- Restauration automatique des conversations à la réouverture de l'application.
+- Migration SQLite dédiée aux conversations et messages de l'assistant, avec isolation des données par utilisateur.
+
+### Modifié
+- Transmission de l'historique récent de l'onglet actif au modèle afin de préserver le contexte propre à chaque conversation.
+- Exécution indépendante des requêtes dans chaque onglet, avec brouillons et indicateurs de chargement séparés.
+- Amélioration du rendu Markdown des réponses, notamment les titres, paragraphes, listes et textes en gras.
+- Affichage plus robuste des graphiques avec détection des séries, prise en charge de plusieurs valeurs et conversion des nombres formatés.
+- Synchronisation automatique de la version du backend avec la version globale lors des prochaines releases.
+
+### Corrigé
+- Normalisation des réponses incohérentes des fournisseurs LLM lorsqu'un graphique est annoncé mais que le type ou les données retournés sont incomplets.
+- Persistance d'un message d'erreur dans l'historique lorsqu'une demande ne peut pas être traitée.
+
+### Technique
+- Ajout d'API authentifiées pour lister, créer, renommer et supprimer les conversations.
+- Sérialisation des écritures SQLite de l'assistant afin d'éviter la perte de données lors de conversations parallèles.
+- Ajout de tests couvrant la persistance, l'isolation utilisateur, le renommage, la suppression et la limite de 10 discussions.
+
 ## [2.1.15] - 2026-07-18
 
 ### Modifié

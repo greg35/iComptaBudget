@@ -377,6 +377,13 @@ async function migrateDataDb() {
     } catch (e) {
       console.error('Failed running migration 005-create-project-allocations:', e && e.message);
     }
+
+    try {
+      const { createAssistantConversationTables } = require('../migrations/006-create-assistant-conversations');
+      await createAssistantConversationTables();
+    } catch (e) {
+      console.error('Failed running migration 006-create-assistant-conversations:', e && e.message);
+    }
   } catch (e) {
     console.error('Database migration failed:', e && e.message);
   }

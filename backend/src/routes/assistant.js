@@ -1,10 +1,17 @@
 const express = require('express');
 const OpenAI = require('openai');
 const fs = require('fs');
-const initSqlJs = require('sql.js');
 const config = require('../config');
 const { openDb } = require('../utils/database');
-const { assertReadOnlyQuery, describeSchema, rowsFromResult } = require('../utils/assistantData');
+const { assertReadOnlyQuery, describeSchema, normalizeAssistantResponse, rowsFromResult } = require('../utils/assistantData');
+const {
+  listConversations,
+  createConversation,
+  renameConversation,
+  deleteConversation,
+  getConversationMessages,
+  addMessage,
+} = require('../services/assistantConversationService');
 
 const router = express.Router();
 
@@ -15,17 +22,65 @@ function formatContextRows(rows) {
   return `${JSON.stringify(selectedRows)}${rows.length > MAX_CONTEXT_ROWS ? ` (truncated: ${rows.length} rows total)` : ''}`;
 }
 
+function sendConversationError(res, error) {
+  console.error('Assistant conversation error:', error);
+  return res.status(error.status || 500).json({ error: error.message || 'Erreur interne' });
+}
+
+router.get('/conversations', async (req, res) => {
+  try {
+    res.json(await listConversations(req.user.id));
+  } catch (error) {
+    sendConversationError(res, error);
+  }
+});
+
+router.post('/conversations', async (req, res) => {
+  try {
+    res.status(201).json(await createConversation(req.user.id, req.body?.title));
+  } catch (error) {
+    sendConversationError(res, error);
+  }
+});
+
+router.patch('/conversations/:id', async (req, res) => {
+  try {
+    res.json(await renameConversation(req.user.id, req.params.id, req.body?.title));
+  } catch (error) {
+    sendConversationError(res, error);
+  }
+});
+
+router.delete('/conversations/:id', async (req, res) => {
+  try {
+    await deleteConversation(req.user.id, req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    sendConversationError(res, error);
+  }
+});
+
 router.post('/chat', async (req, res) => {
+  let storedUserMessage = false;
+  let conversationId;
   try {
     const { message } = req.body;
+    conversationId = req.body.conversationId;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
+    if (!conversationId) {
+      return res.status(400).json({ error: 'Conversation is required' });
+    }
+
+    const conversationHistory = await getConversationMessages(req.user.id, conversationId);
+    await addMessage(req.user.id, conversationId, { role: 'user', content: message });
+    storedUserMessage = true;
 
     // Step 0: Get LLM settings from DB
     if (!fs.existsSync(config.DATA_DB_PATH)) {
-      return res.status(500).json({ error: 'Database not found' });
+      throw new Error('Database not found');
     }
 
     const settingsDb = await openDb(config.DATA_DB_PATH);
@@ -48,7 +103,7 @@ router.post('/chat', async (req, res) => {
     }
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'LLM API key not configured in settings' });
+      throw new Error('LLM API key not configured in settings');
     }
 
     const isOpenRouter = llmProvider === 'openrouter';
@@ -170,6 +225,7 @@ router.post('/chat', async (req, res) => {
       model: llmModel,
       messages: [
         { role: "system", content: systemPrompt },
+        ...conversationHistory.slice(-20).map(item => ({ role: item.role, content: item.content })),
         { role: "user", content: message },
       ],
       response_format: { type: "json_object" },
@@ -178,10 +234,16 @@ router.post('/chat', async (req, res) => {
     const llmResponse = JSON.parse(completion.choices[0].message.content);
 
     if (llmResponse.action === 'clarify') {
-      return res.json({
+      const finalResponse = {
         text: llmResponse.question,
         type: 'text'
+      };
+      const storedMessage = await addMessage(req.user.id, conversationId, {
+        role: 'assistant',
+        content: finalResponse.text,
+        type: finalResponse.type,
       });
+      return res.json({ ...finalResponse, message: storedMessage });
     }
 
     let sqlQuery = assertReadOnlyQuery(llmResponse.sql);
@@ -191,7 +253,7 @@ router.post('/chat', async (req, res) => {
     // We use the main DB path as it has the most complete data
     // Check if DB exists
     if (!fs.existsSync(config.DB_PATH)) {
-      return res.status(500).json({ error: 'Database not found' });
+      throw new Error('Database not found');
     }
 
     const db = await openDb(config.DB_PATH);
@@ -238,6 +300,7 @@ router.post('/chat', async (req, res) => {
     If the results are a list of transactions, summarize them or present them clearly.
     If the results are aggregated data (e.g. sum by category), explain the findings and show the exact figures.
     Never claim that no transactions exist when the financial overview shows data. If the SQL result is empty despite known coverage, explain that the requested filter returned no match.
+    Write the "text" field in clear Markdown. Put a blank line before every list and put each list item on its own line. Do not place an entire answer on one line.
     
     Also, determine the best way to visualize this data.
     Return a JSON object with this structure:
@@ -249,7 +312,8 @@ router.post('/chat', async (req, res) => {
     }
     
     For "data", use the provided query results directly if they are suitable, or transform them if needed for the chart.
-    For charts, ensure the data has clear keys (e.g. "name", "value").
+    If the text says that a chart or graph is shown, "type" MUST be "chart" and both "chartType" and a non-empty "data" array MUST be present.
+    For charts, ensure the data has clear keys (e.g. "name", "value") and keep plotted values as JSON numbers, not formatted currency strings.
     `;
 
     const interpretation = await llmClient.chat.completions.create({
@@ -261,21 +325,37 @@ router.post('/chat', async (req, res) => {
       response_format: { type: "json_object" },
     });
 
-    const finalResponse = JSON.parse(interpretation.choices[0].message.content);
+    const finalResponse = normalizeAssistantResponse(
+      JSON.parse(interpretation.choices[0].message.content),
+      queryResults,
+    );
+    const storedMessage = await addMessage(req.user.id, conversationId, {
+      role: 'assistant',
+      content: finalResponse.text,
+      type: finalResponse.type,
+      chartType: finalResponse.chartType,
+      data: finalResponse.data,
+    });
 
-    // If the LLM didn't include the full data in the response (it might truncate), 
-    // we can inject the original query results if the type is table and data is missing or small.
-    // But usually, we trust the LLM to format the data for the specific view.
-    // However, for large tables, we might want to just pass the raw results.
-    if (finalResponse.type === 'table' && (!finalResponse.data || finalResponse.data.length === 0)) {
-      finalResponse.data = queryResults;
-    }
-
-    res.json(finalResponse);
+    res.json({ ...finalResponse, message: storedMessage });
 
   } catch (error) {
     console.error('Assistant Error:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    if (storedUserMessage && conversationId) {
+      try {
+        await addMessage(req.user.id, conversationId, {
+          role: 'assistant',
+          content: "Désolé, une erreur est survenue lors du traitement de votre demande. Veuillez réessayer.",
+          type: 'text',
+        });
+      } catch (persistenceError) {
+        console.error('Failed to persist assistant error message:', persistenceError);
+      }
+    }
+    res.status(error.status || 500).json({
+      error: error.status ? error.message : 'Internal server error',
+      details: error.message,
+    });
   }
 });
 

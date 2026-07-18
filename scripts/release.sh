@@ -80,6 +80,8 @@ echo_success "Application construite avec succès"
 echo_info "Mise à jour de la version ($VERSION_TYPE)..."
 npm version $VERSION_TYPE --no-git-tag-version > /dev/null 2>&1
 NEW_VERSION=$(node -p "require('./package.json').version")
+echo_info "Synchronisation de la version du backend..."
+npm version "$NEW_VERSION" --prefix backend --no-git-tag-version > /dev/null 2>&1
 echo_success "Nouvelle version: $NEW_VERSION"
 
 # Construire à nouveau avec la nouvelle version
