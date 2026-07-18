@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Calendar, ChevronLeft, ChevronRight, Target, Edit, Save, X, PiggyBank, Wallet, Euro, AlertTriangle, Pencil, Loader2, ArrowDownToLine } from 'lucide-react';
 
-interface SavingsPerMonthProps {
+interface AffectationEpargneProps {
   projects?: Project[];
   showActiveOnly?: boolean;
   onAllocationChange?: () => void;
@@ -135,7 +135,7 @@ interface CurrentMonthData {
   targetBreakdown: { [projectName: string]: number };
 }
 
-export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
+export const AffectationEpargne: React.FC<AffectationEpargneProps> = ({
   projects = [],
   showActiveOnly = false,
   onAllocationChange
@@ -379,7 +379,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
   };
 
   useEffect(() => {
-    console.log('SavingsPerMonth useEffect triggered:', {
+    console.log('AffectationEpargne useEffect triggered:', {
       projectsLength: projects.length,
       showActiveOnly,
       selectedMonth,
@@ -447,7 +447,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Épargne par Mois</h1>
+            <h1 className="text-2xl font-bold">Affectation Epargne</h1>
           </div>
           <div className="flex items-center justify-between w-[32rem] min-w-[32rem]">
             <Button variant="outline" size="sm" disabled className="h-8 w-8 p-0 flex-shrink-0">
@@ -496,7 +496,7 @@ export const SavingsPerMonth: React.FC<SavingsPerMonthProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Épargne par Mois</h1>
+          <h1 className="text-2xl font-bold">Affectation Epargne</h1>
         </div>
         
         {/* Navigation des mois */}

@@ -10,7 +10,7 @@ import { HomeView } from "./components/HomeView";
 import { GlobalSavingsFooter } from "./components/GlobalSavingsFooter";
 import { SettingsView } from "./components/SettingsView";
 import { MonthlySavingsView } from "./components/MonthlySavingsView";
-import { SavingsPerMonth } from "./components/SavingsPerMonth";
+import { AffectationEpargne } from "./components/AffectationEpargne";
 import { GoalSavingsProjectionView } from "./components/GoalSavingsProjectionView";
 import { SavingsEvolutionView } from "./components/SavingsEvolutionView";
 import { CategoryMatrixView } from "./components/CategoryMatrixView";
@@ -135,7 +135,7 @@ function BudgetApp() {
       <Route path="/home" element={<BudgetAppContent />} />
       <Route path="/settings" element={<BudgetAppContent />} />
       <Route path="/monthly-savings" element={<BudgetAppContent />} />
-      <Route path="/month-breakdown" element={<BudgetAppContent />} />
+      <Route path="/affectation-epargne" element={<BudgetAppContent />} />
       <Route path="/projection-epargne" element={<BudgetAppContent />} />
       <Route path="/savings-evolution" element={<BudgetAppContent />} />
       <Route path="/category-matrix" element={<BudgetAppContent />} />
@@ -162,7 +162,7 @@ function BudgetAppContent() {
     location === "/" || location === "/home" ? "home" :
       location === "/settings" ? "settings" :
         location === "/monthly-savings" ? "monthly-savings" :
-          location === "/month-breakdown" ? "month-breakdown" :
+          location === "/affectation-epargne" ? "affectation-epargne" :
             location === "/projection-epargne" ? "projection-epargne" :
               location === "/savings-evolution" ? "savings-evolution" :
                 location === "/category-matrix" ? "category-matrix" :
@@ -492,7 +492,7 @@ function BudgetAppContent() {
       home: "/home",
       settings: "/settings",
       "monthly-savings": "/monthly-savings",
-      "month-breakdown": "/month-breakdown",
+      "affectation-epargne": "/affectation-epargne",
       "projection-epargne": "/projection-epargne",
       "savings-evolution": "/savings-evolution",
       "category-matrix": "/category-matrix",
@@ -756,9 +756,9 @@ return (
           isUpdatingAccounts={isUpdatingAccounts}
         />
 
-        <main className={`min-w-0 flex-1 p-4 pt-16 sm:p-6 sm:pt-6 space-y-6 flex flex-col ${(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'transactions-list') ? 'pb-28' : ''}`}>
+        <main className={`min-w-0 flex-1 p-4 pt-16 sm:p-6 sm:pt-6 space-y-6 flex flex-col ${(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'affectation-epargne' || currentView === 'transactions-list') ? 'pb-28' : ''}`}>
           <SidebarTrigger
-            className="fixed right-4 top-4 z-40 size-10 border bg-background shadow-sm md:hidden"
+            className="mobile-sidebar-trigger fixed top-4 z-40 size-10 border bg-background shadow-sm"
             aria-label="Ouvrir le menu de navigation"
             title="Ouvrir le menu"
           />
@@ -777,8 +777,8 @@ return (
               projects={projects}
               showActiveOnly={showActiveOnly}
             />
-          ) : currentView === "month-breakdown" ? (
-            <SavingsPerMonth
+          ) : currentView === "affectation-epargne" ? (
+            <AffectationEpargne
               projects={projects}
               showActiveOnly={showActiveOnly}
               onAllocationChange={loadProjects}
@@ -837,7 +837,7 @@ return (
           )}
         </main>
       </div>
-      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'month-breakdown' || currentView === 'projection-epargne' || currentView === 'savings-evolution' || currentView === 'category-matrix' || currentView === 'transactions-list') && (
+      {(currentView === 'projects-table' || currentView === 'monthly-savings' || currentView === 'affectation-epargne' || currentView === 'projection-epargne' || currentView === 'savings-evolution' || currentView === 'category-matrix' || currentView === 'transactions-list') && (
         <GlobalSavingsFooter projects={projects} savingsAccounts={savingsAccounts} />
       )}
       <Toaster />

@@ -127,12 +127,12 @@ export function ProjectsSidebar({ projects, selectedProjectId, currentView, show
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => handleViewChange('month-breakdown')}
-              isActive={currentView === 'month-breakdown'}
+              onClick={() => handleViewChange('affectation-epargne')}
+              isActive={currentView === 'affectation-epargne'}
               className="w-full"
             >
               <Calendar className="h-4 w-4" />
-              <span>Épargne par Mois</span>
+              <span>Affectation Epargne</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

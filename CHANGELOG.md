@@ -5,6 +5,15 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [2.1.15] - 2026-07-18
+
+### Modifié
+- Renommage de la vue « Épargne par Mois » en « Affectation Épargne », avec mise à jour de sa route et de la navigation.
+
+### Corrigé
+- Déplacement du bouton du menu mobile à gauche pour éviter qu'il recouvre les actions situées à droite.
+- Masquage garanti du bouton du menu mobile sur les navigateurs d'ordinateur.
+
 ## [2.1.14] - 2026-07-18
 
 ### Corrigé

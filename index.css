@@ -403,9 +403,17 @@
   grid-template-columns: 1fr;
   gap: 1rem;
 }
+.mobile-sidebar-trigger {
+  left: 1rem;
+}
+
 @media (min-width: 768px) {
   .home-cols-4 {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mobile-sidebar-trigger {
+    display: none;
   }
 }
 @media (min-width: 1024px) {
